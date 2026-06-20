@@ -8,12 +8,12 @@
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 #include "G4Threading.hh"
+#include "G4HadronicParameters.hh" 
 
 #include "PhysicsList.hh"
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
 
-#include "FTFP_BERT_HP.hh"
 
 
 int main(int argc, char**argv){
@@ -47,9 +47,12 @@ int main(int argc, char**argv){
         G4cout << "=== Running in Single thread mode ===" << G4endl;
     #endif
 
-    //PhysicsList  (PhysicsList.ccは使用しない)
-    G4VModularPhysicsList *physicsList = new FTFP_BERT_HP();
+    //PhysicsList  
+    PhysicsList* physicsList = new PhysicsList();
     runManager->SetUserInitialization(physicsList);
+
+    //放射性崩壊の時間閾値を非常に大きな値に設定する
+    G4HadronicParameters::Instance()->SetTimeThresholdForRadioactiveDecay( 1.0e+60*CLHEP::year );
     
     //DetectorConstruction
     runManager->SetUserInitialization(new DetectorConstruction());

@@ -1,52 +1,50 @@
 #include "PrimaryGenerator.hh"
+#include "PrimaryGeneratorMessenger.hh" // 【修正】インクルードを追加
 
 PrimaryGenerator::PrimaryGenerator()
 {
     fParticleGun = new G4ParticleGun(1);
+    fMessenger = new PrimaryGeneratorMessenger(this);
 
-    // Particle position
-    G4double x = 0. * m;
-    G4double y = 0. * m;
-    G4double z = 0. * m;
+    fSourceType = "neutron"; // デフォルトのソースタイプを設定
 
-    G4ThreeVector pos(x,y,z);
-
-
-    // Particle Type
-    G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
-    G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
-
-    fParticleGun -> SetParticlePosition(pos);
-    fParticleGun -> SetParticleEnergy(0.500 * MeV);
-    fParticleGun -> SetParticleDefinition(particle);
-
-    
+    //位置は共通で原点とする
+    fParticleGun->SetParticlePosition(G4ThreeVector(0.*m, 0.*m, 0.*m));
 }
 
 PrimaryGenerator::~PrimaryGenerator()
 {
     delete fParticleGun;
+    delete fMessenger; 
 }
 
 void PrimaryGenerator::GeneratePrimaries(G4Event *anEvent)
 {
-    
-    //球状分布
-    G4ThreeVector randomMom = G4RandomDirection();
-    
-    //発射ごとに新しい方向にセット
-    fParticleGun->SetParticleMomentumDirection(randomMom);
-    
+    if (fSourceType == "neutron") {
+        G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
+        G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
+        fParticleGun->SetParticleDefinition(particle);
+        fParticleGun->SetParticleEnergy(0.500 * MeV);
+        fParticleGun->SetParticleMomentumDirection(G4RandomDirection());
+    }
+    else if (fSourceType == "137Cs") {
+        G4IonTable *ionTable = G4IonTable::GetIonTable();
+        G4ParticleDefinition *ion = ionTable->GetIon(55, 137, 0.0);
+        fParticleGun->SetParticleDefinition(ion);
+        fParticleGun->SetParticleEnergy(0.* eV);
+        fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 0.));
+    }
+    else if (fSourceType == "90Sr") {
+        G4IonTable *ionTable = G4IonTable::GetIonTable();
+        G4ParticleDefinition *ion = ionTable->GetIon(38, 90, 0.0);
+        fParticleGun->SetParticleDefinition(ion);
+        fParticleGun->SetParticleEnergy(0.* eV);
+        fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0., 0., 0.));
+    }
+    else {
+        G4cerr << "Error: Unknown source type: " << fSourceType << G4endl;
+        return;
+    }
 
-    /*
-    G4ThreeVector mom(1.0,0., 0.);
-    fParticleGun->SetParticleMomentumDirection(mom);
-    */
-
-    /*　確認用
-    G4cout << "x: " << randomMom[0] << " y: " << randomMom[1] << " z: " << randomMom[2] << G4endl;
-    */
-
-    // Create vertex
     fParticleGun->GeneratePrimaryVertex(anEvent);
 }

@@ -7,6 +7,10 @@
 #include "G4ParticleTable.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4RandomDirection.hh"
+#include "G4IonTable.hh"
+
+class G4ParticleGun;
+class PrimaryGeneratorMessenger; // 前方宣言
 
 class PrimaryGenerator : public G4VUserPrimaryGeneratorAction
 {
@@ -16,9 +20,12 @@ class PrimaryGenerator : public G4VUserPrimaryGeneratorAction
 
      virtual void GeneratePrimaries(G4Event *);
 
+     void SetSourceType(G4String type) { fSourceType = type; } // ソースタイプを設定するメソッド
+
     private:
         G4ParticleGun *fParticleGun;
-
+        PrimaryGeneratorMessenger *fMessenger; // メッセンジャーのポインタ
+        G4String fSourceType; // ソースタイプを保持するメンバ変数
 };
 
 
