@@ -1,0 +1,11 @@
+# 1. ジオメトリや物理プロセスの初期化（これが最優先！）
+/run/initialize
+
+# 2. 可視化の設定
+/vis/open OGLIX
+/vis/viewer/set/autoRefresh true
+/vis/drawVolume
+
+# 3. 粒子の軌跡を表示する設定
+/vis/scene/add/trajectories smooth
+/vis/scene/endOfEventAction accumulate
