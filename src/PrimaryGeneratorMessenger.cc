@@ -13,8 +13,8 @@ PrimaryGeneratorMessenger::PrimaryGeneratorMessenger(PrimaryGenerator *action) :
     // コマンドの作成
     fSourceCmd = new G4UIcmdWithAString("/mygen/sourceType", this); 
     // 指定したコマンドが入力されたときは、このクラス自身に通知されるようにする
-    fSourceCmd->SetGuidance("Select soruce type: neutron, 137Cs, 90Sr");
-    fSourceCmd->SetCandidates("neutron 137Cs 90Sr");
+    fSourceCmd->SetGuidance("Select soruce type: neutron, gamma(137Cs),137Cs, 90Sr, 90Y");
+    fSourceCmd->SetCandidates("neutron gamma(137Cs) 137Cs 90Sr 90Y");
 
     fSourceCmd->SetParameterName("type",false);
     fSourceCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
