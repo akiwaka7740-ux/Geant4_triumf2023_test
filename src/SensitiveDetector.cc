@@ -119,11 +119,11 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
             fIncidentEnergy = aStep->GetPreStepPoint()->GetKineticEnergy() / keV;
 
             //debug用
-            /*
+            
             G4StepPoint *prePot = aStep->GetPreStepPoint();
             G4ThreeVector worldPos = prePot->GetPosition();
             G4cout << worldPos << G4endl;
-            */
+            
             
             // 確認用出力
             // G4cout << "Neutron Entered! Energy: " << fIncidentEnergy << " MeV" << G4endl;

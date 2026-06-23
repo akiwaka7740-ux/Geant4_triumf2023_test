@@ -50,8 +50,8 @@ std::map<G4String, EnableAndID> Mode = {
 //テスト用
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
-  {"LigGlass",  { false,    1,    1 } },
-  {"Uroko",     { true,   10,    1 } },
+  {"LigGlass",  { true,    1,    1 } },
+  {"Uroko",     { false,   10,    1 } },
   {"HILE",      { false,   20,    1 } },
   {"HPGe",      { false,   30,    7 } },
   {"BetaPlastic", { false,   40,    1 } },
@@ -114,12 +114,11 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4LogicalVolume* Lig_LogVol = fLig->GetLogicalVolume();
 
     G4double front_Lig = -132.0 * mm;
-    G4double total_length_Lig = 246.0 * mm;
+    G4double total_length_Lig = (28.5 + 246.0) * mm;
     
     G4RotationMatrix rot_Lig;
     rot_Lig.rotateX(-90.0 * deg);
     G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0), 0.0);
-
     new G4PVPlacement(G4Transform3D(rot_Lig, pos_Lig), objName+"_Phys", Lig_LogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
   }
 
