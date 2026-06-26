@@ -35,7 +35,7 @@ void PrimaryGenerator::GeneratePrimaries(G4Event *anEvent)
         G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
         fParticleGun->SetParticleDefinition(particle);
         fParticleGun->SetParticleEnergy(0.500 * MeV);
-        fParticleGun->SetParticleMomentumDirection(G4ThreeVector(0., -1., 0.));
+        fParticleGun->SetParticleMomentumDirection(G4ThreeVector(1., 0., 0.));
     }
 
     else if (fSourceType == "gamma(137Cs)") {

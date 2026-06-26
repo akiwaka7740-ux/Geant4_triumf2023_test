@@ -50,8 +50,8 @@ std::map<G4String, EnableAndID> Mode = {
 //テスト用
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
-  {"LigGlass",  { true,    1,    1 } },
-  {"Uroko",     { false,   10,    1 } },
+  {"LigGlass",  { false,    1,    1 } },
+  {"Uroko",     { true,   10,    1 } },
   {"HILE",      { false,   20,    1 } },
   {"HPGe",      { false,   30,    7 } },
   {"BetaPlastic", { false,   40,    1 } },

@@ -1,5 +1,9 @@
 #include "LogVol/UrokoLogVol.hh"
 #include "Material/BC408Mat.hh"
+#include "Material/PMTGlassMat.hh"
+#include "Material/AirMat.hh"
+#include "Material/VacuumMat.hh"
+#include "Material/AcrylicMat.hh"
 
 #include "G4Box.hh"
 #include "G4Trd.hh"
@@ -101,11 +105,16 @@ UrokoLogVol::UrokoLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   // =============================================================
   // 3. Material と Logical Volume
   // =============================================================
+  VacuumMat* fVacuum = new VacuumMat();
   BC408Mat* fBC408 = new BC408Mat();
-  auto matVacuum  = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic");
+  PMTGlassMat* fPMTGlass = new PMTGlassMat();
+  AcrylicMat* fAcrylic = new AcrylicMat();
+
+  auto matVacuum  = fVacuum->GetMaterial();
   auto matBC408   = fBC408->GetMaterial();
-  auto matAcrylic = G4NistManager::Instance()->FindOrBuildMaterial("G4_PLEXIGLASS");
-  auto matGlass   = G4NistManager::Instance()->FindOrBuildMaterial("G4_Pyrex_Glass");
+  auto matGlass   = fPMTGlass->GetMaterial();
+  auto matAcrylic = fAcrylic->GetMaterial();
+  //現時点ではAl（光電面）までの過程を考慮
   auto matAl      = G4NistManager::Instance()->FindOrBuildMaterial("G4_Al");
 
   // Mother Volume (透明)
