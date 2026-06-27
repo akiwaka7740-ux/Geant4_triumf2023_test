@@ -37,7 +37,7 @@ BC408Mat::BC408Mat() {
         { 520.0, 1.58 }
     });
 
-    //吸収長
+    //吸収長 (pilsooさんのプログラムでは2100mm)
     AddPropertyFromNm("ABSLENGTH", {
         { 360.0, 3800.*mm }, { 370.0, 3800.*mm }, { 380.0, 3800.*mm }, { 390.0, 3800.*mm },
         { 400.0, 3800.*mm }, { 410.0, 3800.*mm }, { 420.0, 3800.*mm }, { 430.0, 3800.*mm },
@@ -57,15 +57,17 @@ BC408Mat::BC408Mat() {
     });
 
     //　光子の発生数
-    mpt->AddConstProperty("SCINTILLATIONYIELD", 8000. /MeV);
-    //　光子発生のばらつき（ポアソン分布）
-    mpt->AddConstProperty("RESOLUTIONSCALE", 1.0);
+    mpt->AddConstProperty("SCINTILLATIONYIELD", 10000. /MeV);    
+    //　光子発生のばらつき（ポアソン分布）  
+    mpt->AddConstProperty("RESOLUTIONSCALE", 1.0); 
     //単一の成分のみと仮定
-    mpt->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1*ns);
+    mpt->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1*ns);    
     mpt->AddConstProperty("SCINTILLATIONRISETIME1", 0.9*ns);
 
-
     fMaterial->SetMaterialPropertiesTable(mpt);
+    
+    //クチンチング（消光効果）に関するパラメータ
+    fMaterial->GetIonisation()->SetBirksConstant( (1.31e-2*(g/cm2/MeV)) / (1.032*(g/cm3)) );
 
 
 

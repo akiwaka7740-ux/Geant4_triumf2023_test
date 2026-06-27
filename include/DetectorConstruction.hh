@@ -7,7 +7,7 @@
 class G4VPhysicalVolume;
 class G4LogicalVolume;
 class LigLogVol;
-class UrokoLogVol;
+class UROKOLogVol;
 class HILELogVol;
 class HPGeLogVol;
 class MagnetLogVol;
@@ -32,7 +32,7 @@ class DetectorConstruction : public G4VUserDetectorConstruction
   private:
     // 各検出器クラスのインスタンス
     LigLogVol* fLig;
-    UrokoLogVol* fUroko;
+    UROKOLogVol* fUROKO;
     HILELogVol* fHile;
     HPGeLogVol* fHPGe;
     BetaPlasticLogVol* fBetaPlastic;

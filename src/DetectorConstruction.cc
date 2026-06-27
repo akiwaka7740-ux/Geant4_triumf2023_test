@@ -1,6 +1,6 @@
 #include "DetectorConstruction.hh"
 #include "LogVol/LigLogVol.hh"
-#include "LogVol/UrokoLogVol.hh"
+#include "LogVol/UROKOLogVol.hh"
 #include "LogVol/HILELogVol.hh"
 #include "LogVol/HPGeLogVol.hh"
 #include "LogVol/BetaPlasticLogVol.hh"
@@ -34,7 +34,7 @@ struct EnableAndID { G4bool Enable; G4int ID, nObj; };
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
   {"LigGlass",  { false,    1,    1 } },
-  {"Uroko",     { false,   10,    4 } },
+  {"UROKO",     { false,   10,    4 } },
   {"HILE",      { false,   20,    6 } },
   {"HPGe",      { false,   30,    7 } },
   {"BetaPlastic", { false,   40,    1 } },
@@ -51,7 +51,7 @@ std::map<G4String, EnableAndID> Mode = {
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
   {"LigGlass",  { false,    1,    1 } },
-  {"Uroko",     { true,   10,    1 } },
+  {"UROKO",     { true,   10,    1 } },
   {"HILE",      { false,   20,    1 } },
   {"HPGe",      { false,   30,    7 } },
   {"BetaPlastic", { false,   40,    1 } },
@@ -78,7 +78,7 @@ namespace {
 }
 
 DetectorConstruction::DetectorConstruction()
-: G4VUserDetectorConstruction(), fLig(nullptr), fUroko(nullptr), fHile(nullptr), World_LogVol(nullptr)
+: G4VUserDetectorConstruction(), fLig(nullptr), fUROKO(nullptr), fHile(nullptr), World_LogVol(nullptr)
 {
 }
 
@@ -125,61 +125,60 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   // =============================================================
   // UROKO Detector (4台)
   // =============================================================
-  objName = "Uroko";
+  objName = "UROKO";
   if( Mode[objName].Enable ) {
-    fUroko = new UrokoLogVol(objName, 0, checkOverlaps);
-    G4LogicalVolume* Uroko_LogVol = fUroko->GetLogicalVolume();
+    fUROKO = new UROKOLogVol(objName, 0, checkOverlaps);
+    G4LogicalVolume* UROKO_LogVol = fUROKO->GetLogicalVolume();
 
     /*
     //本番用
     const G4int nObj = Mode[objName].nObj;
     G4double updownDeg = 5.7 * deg;
     G4double sideDeg = 10.2 * deg;
-    G4double margin_Uroko = 2.5 * mm;
+    G4double margin_UROKO = 2.5 * mm;
     G4double hexagon_r = 100.0 * mm;
     G4double hexagon_rr = hexagon_r * std::sqrt(3.0) / 2.0;
-    G4double total_Z_Uroko = 111.5 * mm; 
+    G4double total_Z_UROKO = 111.5 * mm; 
 
-    G4double swing_updown = (total_Z_Uroko / 2.0) * std::sin(updownDeg);
-    G4double swing_side   = (total_Z_Uroko / 2.0) * std::sin(sideDeg);
+    G4double swing_updown = (total_Z_UROKO / 2.0) * std::sin(updownDeg);
+    G4double swing_side   = (total_Z_UROKO / 2.0) * std::sin(sideDeg);
 
-    G4ThreeVector pos_Uroko[4] = {
-        G4ThreeVector(1000*mm,  (hexagon_rr + margin_Uroko + swing_updown), 0),
-        G4ThreeVector(1000*mm, -(hexagon_rr + margin_Uroko + swing_updown), 0),
-        G4ThreeVector(1000*mm, 0,  (1.5 * hexagon_r + margin_Uroko + swing_side)),
-        G4ThreeVector(1000*mm, 0, -(1.5 * hexagon_r + margin_Uroko + swing_side))
+    G4ThreeVector pos_UROKO[4] = {
+        G4ThreeVector(1000*mm,  (hexagon_rr + margin_UROKO + swing_updown), 0),
+        G4ThreeVector(1000*mm, -(hexagon_rr + margin_UROKO + swing_updown), 0),
+        G4ThreeVector(1000*mm, 0,  (1.5 * hexagon_r + margin_UROKO + swing_side)),
+        G4ThreeVector(1000*mm, 0, -(1.5 * hexagon_r + margin_UROKO + swing_side))
     };
 
-    G4RotationMatrix rot_Uroko[4];
-    rot_Uroko[0].rotateY(90.0*deg); rot_Uroko[0].rotateZ(updownDeg);
-    rot_Uroko[1].rotateY(90.0*deg); rot_Uroko[1].rotateZ(-updownDeg);
-    rot_Uroko[2].rotateY(90.0*deg - sideDeg);
-    rot_Uroko[3].rotateY(90.0*deg + sideDeg);
+    G4RotationMatrix rot_UROKO[4];
+    rot_UROKO[0].rotateY(90.0*deg); rot_UROKO[0].rotateZ(updownDeg);
+    rot_UROKO[1].rotateY(90.0*deg); rot_UROKO[1].rotateZ(-updownDeg);
+    rot_UROKO[2].rotateY(90.0*deg - sideDeg);
+    rot_UROKO[3].rotateY(90.0*deg + sideDeg);
 
     for(G4int i=0; i<nObj; i++) {
-      pos_Uroko[i].setX(pos_Uroko[i].getX() + (total_Z_Uroko / 2.0)); 
-      new G4PVPlacement(G4Transform3D(rot_Uroko[i], pos_Uroko[i]), objName+"_Phys", Uroko_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
+      pos_UROKO[i].setX(pos_UROKO[i].getX() + (total_Z_UROKO / 2.0)); 
+      new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName+"_Phys", UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
     }
     */
 
     //テスト用（1台だけ配置）
     const G4int nObj = Mode[objName].nObj;
     //ターゲット検出器間の距離は 1000 mm
-    //G4ThreeVector pos_Uroko[1] = { G4ThreeVector(1000*mm, 0, 0) };
+    //G4ThreeVector pos_UROKO[1] = { G4ThreeVector(1000*mm, 0, 0) };
 
     //線源検出器間の距離は 10 mmと仮定（実験室では線源をベタ付している）
-    G4ThreeVector pos_Uroko[1] = { G4ThreeVector(10.0*mm, 0, 0) };
+    G4ThreeVector pos_UROKO[] = { G4ThreeVector(10.0*mm, 0, 0) };
 
-    G4RotationMatrix rot_Uroko[1];
-    rot_Uroko[0].rotateY(90.0*deg);
-    G4double total_Z_Uroko = 111.5 * mm; 
+    G4RotationMatrix rot_UROKO[1];
+    rot_UROKO[0].rotateY(90.0*deg);
 
-    for(G4int i=0; i<nObj; i++) {
-      pos_Uroko[i].setX(pos_Uroko[i].getX() + (total_Z_Uroko / 2.0)); 
-      new G4PVPlacement(G4Transform3D(rot_Uroko[i], pos_Uroko[i]), objName+"_Phys", Uroko_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
+    for(G4int i=0; i<nObj; i++){
+      pos_UROKO[i].setX(pos_UROKO[i].getX() + (fUROKO->GetTotalZ()/ 2.0 - 0.01*mm));  //真空層の文を引く
+      new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName+"_Phys", UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
     }
-    
   }
+  
 
   // =============================================================
   // HILE Detector (6台)
@@ -442,8 +441,8 @@ void DetectorConstruction::ConstructSDandField()
     fLig->GetScintiVolume()->SetSensitiveDetector(sensDet);
   }
   
-  if( Mode["Uroko"].Enable && fUroko ) {
-    fUroko->GetScintiVolume()->SetSensitiveDetector(sensDet);
+  if( Mode["UROKO"].Enable && fUROKO ) {
+    fUROKO->GetScintiVolume()->SetSensitiveDetector(sensDet);
   }
 
   if( Mode["HILE"].Enable && fHile ) {

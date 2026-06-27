@@ -8,20 +8,21 @@
 #include "G4VPhysicalVolume.hh"
 #include "G4UserLimits.hh"
 
-class UrokoLogVol
+class UROKOLogVol
 {
   private:
     G4VSolid* Solid;
     G4LogicalVolume* LogVol;
     G4LogicalVolume* LogVol_Scinti; // Scintillator (SD登録用)
+    G4double total_Z;
 
   public:
-     UrokoLogVol(G4String Name="Uroko", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
-    ~UrokoLogVol();
+     UROKOLogVol(G4String Name="UROKO", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
+    ~UROKOLogVol();
 
     G4VSolid* GetSolid()         { return Solid;  }
     G4LogicalVolume* GetLogicalVolume() { return LogVol; }
     G4LogicalVolume* GetScintiVolume()  { return LogVol_Scinti; }
+    G4double GetTotalZ() { return total_Z; }
 };
-
 #endif
