@@ -107,7 +107,7 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   G4IntersectionSolid* solid_Guide3 = new G4IntersectionSolid(Name+"_Guide3", solid_Guide1, solid_Guide2);
 
   G4Box* solid_Guide4 = new G4Box(Name+"_Guide4", PMT_W2_UROKO / 2.0, PMT_W_UROKO / 2.0, guide_S_UROKO / 2.0);
-  G4ThreeVector pos_guide_box(0, 0, (guide_L_UROKO / 2.0) - guide_S_UROKO + (thickness_UROKO / 2.0));
+  G4ThreeVector pos_guide_box(0, 0, (guide_L_UROKO / 2.0) + (guide_S_UROKO/2.0));
   G4UnionSolid* solid_Guide = new G4UnionSolid(Name+"_GuideSolid", solid_Guide3, solid_Guide4, G4Transform3D(G4RotationMatrix(), pos_guide_box));
 
   // (D) PMT & Cathode
@@ -143,18 +143,18 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   visScinti->SetForceSolid(true);
   LogVol_Scinti->SetVisAttributes(visScinti);
 
-  G4LogicalVolume* LogVol_Guide = new G4LogicalVolume(solid_Guide, matAcrylic, Name+"_LV_Guide", 0, 0, fStepLimit, false);
+  LogVol_Guide = new G4LogicalVolume(solid_Guide, matAcrylic, Name+"_LV_Guide", 0, 0, fStepLimit, false);
   G4VisAttributes* visGuide = new G4VisAttributes(TRUE, Color(ColID::Gray, 0.4));
   visGuide->SetForceSolid(true);
   LogVol_Guide->SetVisAttributes(visGuide);
 
   // PMTは1つだけ作成して、後で2回使い回します
-  G4LogicalVolume* LogVol_PMT = new G4LogicalVolume(solid_PMT, matGlass, Name+"_LV_PMT", 0, 0, fStepLimit, false);
+  LogVol_PMT = new G4LogicalVolume(solid_PMT, matGlass, Name+"_LV_PMT", 0, 0, fStepLimit, false);
   G4VisAttributes* visPMT = new G4VisAttributes(TRUE, Color(ColID::Magenta, 0.8));
   visPMT->SetForceSolid(true);
   LogVol_PMT->SetVisAttributes(visPMT);
 
-  G4LogicalVolume* LogVol_Cathode = new G4LogicalVolume(solid_Cathode, matAl, Name+"_LV_Cathode", 0, 0, fStepLimit, false);
+  LogVol_Cathode = new G4LogicalVolume(solid_Cathode, matAl, Name+"_LV_Cathode", 0, 0, fStepLimit, false);
   G4VisAttributes* visCathode = new G4VisAttributes(TRUE, Color(ColID::Yellow, 1.0));
   visCathode->SetForceSolid(true);
   LogVol_Cathode->SetVisAttributes(visCathode);
@@ -172,7 +172,7 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   G4VPhysicalVolume* physGuide = new G4PVPlacement(Move(0, 0, z_guide), LogVol_Guide, "Guide", LogVol, false, 0, checkOverlaps);
 
   // PMT は並列に2つ配置
-  double z_pmt = z_Scinti + thickness_UROKO - 1.0*mm + guide_L_UROKO + guide_S_UROKO + (PMT_L_UROKO / 2.0);
+  double z_pmt = z_Scinti + thickness_UROKO + guide_L_UROKO + guide_S_UROKO + (PMT_L_UROKO / 2.0);
   G4VPhysicalVolume* physPMT1 = new G4PVPlacement(Move(-PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT1", LogVol, false, 1, checkOverlaps);
   G4VPhysicalVolume* physPMT2 = new G4PVPlacement(Move( PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT2", LogVol, false, 2, checkOverlaps);
 

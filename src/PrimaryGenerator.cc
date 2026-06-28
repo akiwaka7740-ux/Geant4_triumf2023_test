@@ -38,6 +38,14 @@ void PrimaryGenerator::GeneratePrimaries(G4Event *anEvent)
         fParticleGun->SetParticleMomentumDirection(G4ThreeVector(1., 0., 0.));
     }
 
+    else if (fSourceType == "gamma") {
+        G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
+        G4ParticleDefinition *particle = particleTable->FindParticle("gamma");
+        fParticleGun->SetParticleDefinition(particle);
+        fParticleGun->SetParticleEnergy(1 * MeV);
+        fParticleGun->SetParticleMomentumDirection(G4ThreeVector(1., 0., 0.));
+    }
+
     else if (fSourceType == "gamma(137Cs)") {
         G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
         G4ParticleDefinition *particle = particleTable->FindParticle("gamma");

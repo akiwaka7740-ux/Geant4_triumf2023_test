@@ -21,7 +21,12 @@
 #include "G4SystemOfUnits.hh"
 #include "G4VisAttributes.hh"
 #include "G4SDManager.hh"
+
 #include "SensitiveDetector.hh"
+#include "ScintiSD.hh"
+#include "CathodeSD.hh"
+
+
 
 #include <map>
 
@@ -432,21 +437,32 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
 void DetectorConstruction::ConstructSDandField()
 {
-  SensitiveDetector* sensDet = new SensitiveDetector("SensitiveDetector");
-  G4SDManager::GetSDMpointer()->AddNewDetector(sensDet);
+  //旧型
+  //SensitiveDetector* sensDet = new SensitiveDetector("SensitiveDetector");
+  //G4SDManager::GetSDMpointer()->AddNewDetector(sensDet);
+
+  ScintiSD* scintiSD = new ScintiSD("ScintiSD");
+  CathodeSD* cathodeSD = new CathodeSD("CathodeSD");
+  
+  G4SDManager::GetSDMpointer()->AddNewDetector(scintiSD);
+  G4SDManager::GetSDMpointer()->AddNewDetector(cathodeSD);
+
 
   //注意：現状のコードでは各検出器を一台ずつテストすることしか想定していない
   
   if( Mode["LigGlass"].Enable && fLig ) {
-    fLig->GetScintiVolume()->SetSensitiveDetector(sensDet);
+    //fLig->GetScintiVolume()->SetSensitiveDetector(sensDet);
   }
   
   if( Mode["UROKO"].Enable && fUROKO ) {
-    fUROKO->GetScintiVolume()->SetSensitiveDetector(sensDet);
+    fUROKO->GetScintiVolume()->SetSensitiveDetector(scintiSD);
+    //fUROKO->GetGuideVolume()->SetSensitiveDetector(cathodeSD);
+    fUROKO->GetPMTVolume()->SetSensitiveDetector(cathodeSD);
+    //fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
   }
 
   if( Mode["HILE"].Enable && fHile ) {
-    fHile->GetScintiVolume()->SetSensitiveDetector(sensDet);
+    //fHile->GetScintiVolume()->SetSensitiveDetector(sensDet);
     //fHile->GetCathodeVolume()->SetSensitiveDetector(sensDet);
   }
 }

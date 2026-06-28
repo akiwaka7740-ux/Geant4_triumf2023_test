@@ -7,14 +7,20 @@
 #include "G4SystemOfUnits.hh"
 #include "G4UnitsTable.hh"
 
-class RunAction : public G4UserRunAction
-{
-public:
-    RunAction();
-    ~RunAction();
+#include "EventAction.hh"
 
-    virtual void BeginOfRunAction(const G4Run *);
-    virtual void EndOfRunAction(const G4Run *);
+class EventAction;
+
+class RunAction : public G4UserRunAction{
+    public:
+        RunAction(EventAction* eventAction);
+        ~RunAction();
+
+        virtual void BeginOfRunAction(const G4Run *);
+        virtual void EndOfRunAction(const G4Run *);
+
+    private:
+        EventAction* fEventAction;
 };
 
 #endif

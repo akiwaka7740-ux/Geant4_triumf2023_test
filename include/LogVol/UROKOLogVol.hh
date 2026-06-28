@@ -14,6 +14,10 @@ class UROKOLogVol
     G4VSolid* Solid;
     G4LogicalVolume* LogVol;
     G4LogicalVolume* LogVol_Scinti; // Scintillator (SD登録用)
+    G4LogicalVolume* LogVol_Guide; // Light Guide (SD登録用)
+    G4LogicalVolume* LogVol_PMT; // PMT (SD登録用)
+    G4LogicalVolume* LogVol_Cathode; // Cathode (SD登録用)
+    
     G4double total_Z;
 
   public:
@@ -23,6 +27,9 @@ class UROKOLogVol
     G4VSolid* GetSolid()         { return Solid;  }
     G4LogicalVolume* GetLogicalVolume() { return LogVol; }
     G4LogicalVolume* GetScintiVolume()  { return LogVol_Scinti; }
+    G4LogicalVolume* GetGuideVolume()  { return LogVol_Guide; }
+    G4LogicalVolume* GetPMTVolume()  { return LogVol_PMT; }
+    G4LogicalVolume* GetCathodeVolume() { return LogVol_Cathode; }
     G4double GetTotalZ() { return total_Z; }
 };
 #endif
