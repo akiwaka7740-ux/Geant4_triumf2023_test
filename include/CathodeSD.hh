@@ -20,7 +20,7 @@ public:
     void EndOfEvent(G4HCofThisEvent* hitCollection) override;
 
 private:
-    G4int fPhotonCount;
+    G4int fPhotonCount[2];
     //ベクトル要素についてはEventActionの管轄
 };
 #endif

@@ -2,10 +2,12 @@
 #include "G4AnalysisManager.hh"
 
 void EventAction::BeginOfEventAction(const G4Event*) {
-    fHitTimeList.clear();
-    fHitPosXList.clear();
-    fHitPosYList.clear();
-    fHitPosZList.clear();
+    for (int i = 0; i < 2; i++) {
+        fHitTimeList[i].clear();
+        fHitPosXList[i].clear();
+        fHitPosYList[i].clear();
+        fHitPosZList[i].clear();
+    }
 }
 
 void EventAction::EndOfEventAction(const G4Event*) {

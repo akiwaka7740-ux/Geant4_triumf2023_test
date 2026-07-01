@@ -4,12 +4,13 @@
 
 CathodeSD::CathodeSD(G4String name)
  : G4VSensitiveDetector(name),
-   fPhotonCount(0)
+   fPhotonCount{0, 0}
 {
 }
 
 void CathodeSD::Initialize(G4HCofThisEvent*) {
-    fPhotonCount = 0;
+    fPhotonCount[0] = 0;
+    fPhotonCount[1] = 0;
 }
 
 G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
@@ -27,35 +28,32 @@ G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
     if (aStep->GetPostStepPoint()->GetStepStatus() == fGeomBoundary) {
         auto nextVol = aStep->GetPostStepPoint()->GetPhysicalVolume();
         if (nextVol && nextVol->GetName() == "Cathode") {
-            fPhotonCount++; // ←ここでカウント！
+
+            G4int copyNo = aStep->GetPreStepPoint()->GetTouchableHandle()->GetCopyNumber();
+
+            // copyNoが1 or 2　なので、0 or 1に変換する
+            G4int pmtIndex = copyNo - 1; 
+
+            if (pmtIndex < 0 || pmtIndex > 1) return false; // copyNoが0か1以外なら無視
+
+            fPhotonCount[pmtIndex]++; 
 
             auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
-            eventAction->AddHitTime(aStep->GetPostStepPoint()->GetGlobalTime());
+            eventAction->AddHitTime(pmtIndex, aStep->GetPostStepPoint()->GetGlobalTime());
 
             G4ThreeVector pos = aStep->GetPostStepPoint()->GetPosition();
-            eventAction->AddHitPos(pos.x(), pos.y(), pos.z());
+            eventAction->AddHitPos(pmtIndex, pos.x(), pos.y(), pos.z());
 
         }
     }
+    
     return true;
 
-
-    /*
-    fPhotonCount++;
-
-    //明示的な型変換
-    auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
-    eventAction->AddHitTime(aStep->GetPostStepPoint()->GetGlobalTime());
-
-    G4ThreeVector pos = aStep->GetPostStepPoint()->GetPosition();
-    eventAction->AddHitPos(pos.x(), pos.y(), pos.z());
-    */
-
-    return true;
 }
 
 void CathodeSD::EndOfEvent(G4HCofThisEvent*) {
     auto analysisManager = G4AnalysisManager::Instance();
-    analysisManager->FillNtupleIColumn(5, fPhotonCount);
+    analysisManager->FillNtupleIColumn(6, fPhotonCount[0]);
+    analysisManager->FillNtupleIColumn(7, fPhotonCount[1]);
     // ※ベクターカラムは FillNtuple ではなく、作成時にポインタ紐づけをする(EventActionが管理する）
 }

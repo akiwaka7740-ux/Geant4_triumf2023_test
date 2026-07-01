@@ -19,6 +19,7 @@ public:
 
 private:
     G4double fTotalEdep;
+    G4double fGenerateedPhotons;
     G4ThreeVector fFirstHitPos;
     G4int fHitCount;
 };
