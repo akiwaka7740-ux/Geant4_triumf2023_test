@@ -1,20 +1,21 @@
-#include "Surface/UROKO/DiffuseSurface.hh"
+#include "Surface/UROKO/BC620Surface.hh"
 #include "G4MaterialPropertiesTable.hh"
 #include "G4SystemOfUnits.hh"
 
-DiffuseSurface::DiffuseSurface() {
-    fSurface = new G4OpticalSurface("DiffuseSurface");
-    fSurface->SetType(dielectric_dielectric);
 
-    //unifiedモデルのランバート反射（全方向へ均一に散乱）
+BC620Surface::BC620Surface() {
+
+    fSurface = new G4OpticalSurface("BC620Surface");
+    fSurface->SetType(dielectric_dielectric);
     fSurface->SetModel(unified);
-    fSurface->SetFinish(groundbackpainted);// ランバート反射（全方向へ均一に散乱）
+    fSurface->SetFinish(groundbackpainted); 
+    fSurface->SetSigmaAlpha(5.0*deg); 
 
     G4MaterialPropertiesTable* mpt = new G4MaterialPropertiesTable();
 
-    std::vector<G4double> ephoton = { 2.034 * eV, 4.136 * eV };  //298~610nm
-    std::vector<G4double> rindex  = { 1.0,  1.0  };
-    std::vector<G4double> ref     = { 0.96, 0.96 }; // ランバート反射率96%（全方向へ均一に散乱）<= 本当にランバート反射になってる？
+    std::vector<G4double> ephoton = { 2.034 * eV, 4.136 * eV }; //298~610nm
+    std::vector<G4double> ref     = { 0.95, 0.95 }; //厳密には波長依存性あり
+    std::vector<G4double> rindex  = { 2.1,  2.1  };
     std::vector<G4double> spike   = { 0.0,  0.0  };
     std::vector<G4double> lobe    = { 0.0,  0.0  };
     std::vector<G4double> back    = { 0.0,  0.0  };
@@ -27,6 +28,7 @@ DiffuseSurface::DiffuseSurface() {
 
     fSurface->SetMaterialPropertiesTable(mpt);
 
+
 }
 
-DiffuseSurface::~DiffuseSurface() {}
+BC620Surface::~BC620Surface() {}

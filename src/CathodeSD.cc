@@ -1,17 +1,30 @@
 #include "G4OpticalPhoton.hh"
+#include "G4EventManager.hh"
+#include "G4OpBoundaryProcess.hh"
+
+
+
 #include "CathodeSD.hh"
 #include "EventAction.hh"
+#include "AnalysisOutput.hh"
+
+
+
 
 CathodeSD::CathodeSD(G4String name)
  : G4VSensitiveDetector(name),
-   fPhotonCount{0, 0}
+   fPhotonArrivedCount{0, 0},
+   fPhotonDetectedCount{0, 0}
 {
 }
 
 void CathodeSD::Initialize(G4HCofThisEvent*) {
-    fPhotonCount[0] = 0;
-    fPhotonCount[1] = 0;
+    fPhotonArrivedCount[0] = 0;
+    fPhotonArrivedCount[1] = 0;
+    fPhotonDetectedCount[0] = 0;
+    fPhotonDetectedCount[1] = 0;
 }
+
 
 G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 
@@ -36,13 +49,15 @@ G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 
             if (pmtIndex < 0 || pmtIndex > 1) return false; // copyNoが0か1以外なら無視
 
-            fPhotonCount[pmtIndex]++; 
+            fPhotonArrivedCount[pmtIndex]++; 
 
             auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
             eventAction->AddHitTime(pmtIndex, aStep->GetPostStepPoint()->GetGlobalTime());
 
             G4ThreeVector pos = aStep->GetPostStepPoint()->GetPosition();
             eventAction->AddHitPos(pmtIndex, pos.x(), pos.y(), pos.z());
+
+            aStep->GetTrack()->SetTrackStatus(fStopAndKill); // 光子を停止させる
 
         }
     }
@@ -52,8 +67,13 @@ G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
 }
 
 void CathodeSD::EndOfEvent(G4HCofThisEvent*) {
-    auto analysisManager = G4AnalysisManager::Instance();
-    analysisManager->FillNtupleIColumn(6, fPhotonCount[0]);
-    analysisManager->FillNtupleIColumn(7, fPhotonCount[1]);
-    // ※ベクターカラムは FillNtuple ではなく、作成時にポインタ紐づけをする(EventActionが管理する）
+    
+    auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
+
+    if(!eventAction) return;
+
+    auto output = eventAction->GetAnalysisOutput();
+    if(!output) return;
+
+    output->FillPMTPhotons(fPhotonArrivedCount[0], fPhotonArrivedCount[1]);
 }

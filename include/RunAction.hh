@@ -6,10 +6,11 @@
 #include "G4AnalysisManager.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4UnitsTable.hh"
+#include "AnalysisOutput.hh"
 
-#include "EventAction.hh"
 
 class EventAction;
+
 
 class RunAction : public G4UserRunAction{
     public:
@@ -21,6 +22,7 @@ class RunAction : public G4UserRunAction{
 
     private:
         EventAction* fEventAction;
+        AnalysisOutput fAnalysisOutput;
 };
 
 #endif

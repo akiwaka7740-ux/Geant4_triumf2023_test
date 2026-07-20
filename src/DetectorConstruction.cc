@@ -172,8 +172,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     //ターゲット検出器間の距離は 1000 mm
     //G4ThreeVector pos_UROKO[1] = { G4ThreeVector(1000*mm, 0, 0) };
 
-    //線源検出器間の距離は 10 mmと仮定（実験室では線源をベタ付している）
-    G4ThreeVector pos_UROKO[] = { G4ThreeVector(10.0*mm, 0, 0) };
+    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1500.0*mm, 0, 0) };
 
     G4RotationMatrix rot_UROKO[1];
     rot_UROKO[0].rotateY(90.0*deg);

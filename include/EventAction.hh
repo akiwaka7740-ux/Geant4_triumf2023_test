@@ -3,9 +3,9 @@
 
 #include "G4UserEventAction.hh"
 #include "globals.hh"
-#include "G4ThreeVector.hh"
-#include "G4RunManager.hh"
 #include <vector>
+
+class AnalysisOutput;
 
 class EventAction : public G4UserEventAction {
 public:
@@ -28,11 +28,32 @@ public:
     std::vector<G4double>& GetHitPosYListRef(G4int id) { return fHitPosYList[id]; }
     std::vector<G4double>& GetHitPosZListRef(G4int id) { return fHitPosZList[id]; }
 
+    std::vector<G4double>& GetScintiPosGlobalRef() { return fScintiPosGlobal; }
+    std::vector<G4double>& GetScintiPosLocalRef()  { return fScintiPosLocal; }
+
+    G4double GetEfficiency(G4int id) const {
+        if (id == 0) return fEff[0];
+        else if (id == 1) return fEff[1];
+        else return 0.0;
+    }
+
+    void SetAnalysisOutput(AnalysisOutput* analysisOutput) { fAnalysisOutput = analysisOutput; }
+    AnalysisOutput* GetAnalysisOutput() const { return fAnalysisOutput; }
+
+
 private:
     std::vector<G4double> fHitTimeList[2];
     std::vector<G4double> fHitPosXList[2];
     std::vector<G4double> fHitPosYList[2];
     std::vector<G4double> fHitPosZList[2];
+
+    std::vector<G4double> fScintiPosGlobal;
+    std::vector<G4double> fScintiPosLocal;
+    G4double fRadius;
+
+    G4double fEff[2] = {0.0, 0.0};
+
+    AnalysisOutput* fAnalysisOutput = nullptr;
   
 };
 #endif

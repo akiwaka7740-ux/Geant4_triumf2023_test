@@ -27,7 +27,11 @@ int main(int argc, char**argv){
     G4Random::setTheSeed(seed);
 
 
-    G4UIExecutive *ui = new G4UIExecutive(argc, argv);
+    G4UIExecutive *ui = nullptr;
+    if(argc == 1){
+        ui = new G4UIExecutive(argc, argv);
+    }
+
 
     #ifdef G4MULTITHREADED
         G4MTRunManager *runManager = new G4MTRunManager;
@@ -41,11 +45,10 @@ int main(int argc, char**argv){
         runManager->SetNumberOfThreads(nThreads);
         G4cout << "=== Running in Multithread mode with " << nThreads << " threads ===" << G4endl;
 
-
     #else
         G4RunManager *runManager = new G4RunManager;
         G4cout << "=== Running in Single thread mode ===" << G4endl;
-    #endif
+    #endif 
 
     //PhysicsList  
     PhysicsList* physicsList = new PhysicsList();
@@ -74,6 +77,19 @@ int main(int argc, char**argv){
     visManager->Initialize();
 
     G4UImanager *UImanager = G4UImanager::GetUIpointer();
+    if (ui)
+    {   
+        ui->SessionStart();
+        delete ui;
+    }
+    else
+    {
+        G4String command = "/control/execute "; 
+        G4String fileName = argv[1];
+        UImanager->ApplyCommand(command + fileName);
+    }
+
+
 
     /*
     if(ui)
@@ -90,7 +106,6 @@ int main(int argc, char**argv){
     */
  
 
-    ui->SessionStart();
-
     return 0;
 }
+

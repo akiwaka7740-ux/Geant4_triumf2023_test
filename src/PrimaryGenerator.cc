@@ -20,23 +20,25 @@ PrimaryGenerator::~PrimaryGenerator()
 
 void PrimaryGenerator::GeneratePrimaries(G4Event *anEvent)
 {
+    
+    if (fSourceType == "neutron") {
+        G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
+        G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
+        fParticleGun->SetParticleDefinition(particle);
+        fParticleGun->SetParticleEnergy(1.00 * MeV);
+        fParticleGun->SetParticleMomentumDirection(G4RandomDirection());
+    }
+    
+
     /*
     if (fSourceType == "neutron") {
         G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
         G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
         fParticleGun->SetParticleDefinition(particle);
-        fParticleGun->SetParticleEnergy(0.500 * MeV);
-        fParticleGun->SetParticleMomentumDirection(G4RandomDirection());
-    }
-    */
-
-    if (fSourceType == "neutron") {
-        G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();
-        G4ParticleDefinition *particle = particleTable->FindParticle("neutron");
-        fParticleGun->SetParticleDefinition(particle);
-        fParticleGun->SetParticleEnergy(0.500 * MeV);
+        fParticleGun->SetParticleEnergy(1.00 * MeV);
         fParticleGun->SetParticleMomentumDirection(G4ThreeVector(1., 0., 0.));
     }
+        */
 
     else if (fSourceType == "gamma") {
         G4ParticleTable *particleTable = G4ParticleTable::GetParticleTable();

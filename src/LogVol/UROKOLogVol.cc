@@ -10,6 +10,8 @@
 #include "Surface/UROKO/DielectricSurface.hh"
 #include "Surface/UROKO/MirrorSurface.hh"
 #include "Surface/UROKO/DiffuseSurface.hh"
+#include "Surface/UROKO/BC620Surface.hh"
+#include "Surface/UROKO/TybekSurface.hh"
 
 
 #include "G4Box.hh"
@@ -90,19 +92,30 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   Solid = new G4Box(Name+"_Solid", 120.0*mm, 120.0*mm, total_Z / 2.0);
 
   // (B) Scintillator (六角柱)　＋　真空層
-  double z_bump[] = {0.0, bumper_T};
   double z1_UROKO[] = {0.0, thickness_UROKO};
   double rI1_UROKO[] = {0.0, 0.0};
   double rO1_UROKO[] = {hexagon_rr_UROKO, hexagon_rr_UROKO};
-  G4VSolid* solid_Bumper = new G4Polyhedra(Name+"_BumperSolid", 0*deg, 360*deg, 6, 2, z_bump, rI1_UROKO, rO1_UROKO); //真空層
+
+  double z_bump[] = {0.0, bumper_T};
+
+  double bumper_r_in  = hexagon_r_UROKO + 0.001 * mm; // 真空層の内側半径（Scintillatorより少し小さくする）<-光子が隅にトラップされるのを防ぐため
+  double bumper_rr_in = bumper_r_in * std::sqrt(3.0) / 2.0;
+  double r0_bumper[] = {bumper_rr_in, bumper_rr_in};
+
+  G4VSolid* solid_Bumper = new G4Polyhedra(Name+"_BumperSolid", 0*deg, 360*deg, 6, 2, z_bump, rI1_UROKO, r0_bumper); //真空層
   G4VSolid* solid_Scinti = new G4Polyhedra(Name+"_ScintiSolid", 0*deg, 360*deg, 6, 2, z1_UROKO, rI1_UROKO, rO1_UROKO);
 
   // (C) Light Guide
+
+  double guide_r_in = hexagon_r_UROKO + 0.001 * mm; // 光子が隅にトラップされるのを防ぐため
+  double guide_rr_in = guide_r_in * std::sqrt(3.0) / 2.0;
+
   double PMT_W2_UROKO = (PMT_W_UROKO + ((PMT_C_UROKO - PMT_W_UROKO) / 2.0)) * 2.0;
   double z2_UROKO[] = {-guide_L_UROKO / 2.0, guide_L_UROKO / 2.0};
-  double rO2_UROKO[] = {hexagon_rr_UROKO, (PMT_W2_UROKO * std::sqrt(3.0) + PMT_W_UROKO) / 4.0};
+  double rO2_UROKO[] = {guide_rr_in, (PMT_W2_UROKO * std::sqrt(3.0) + PMT_W_UROKO) / 4.0};
 
-  G4Trd* solid_Guide1 = new G4Trd(Name+"_Guide1", hexagon_r_UROKO, PMT_W2_UROKO / 2.0, hexagon_rr_UROKO, PMT_W_UROKO / 2.0, guide_L_UROKO / 2.0);
+  
+  G4Trd* solid_Guide1 = new G4Trd(Name+"_Guide1", guide_r_in, PMT_W2_UROKO / 2.0, guide_rr_in, PMT_W_UROKO / 2.0, guide_L_UROKO / 2.0);
   G4Polyhedra* solid_Guide2 = new G4Polyhedra(Name+"_Guide2", 0*deg, 360*deg, 6, 2, z2_UROKO, rI1_UROKO, rO2_UROKO);
   G4IntersectionSolid* solid_Guide3 = new G4IntersectionSolid(Name+"_Guide3", solid_Guide1, solid_Guide2);
 
@@ -186,18 +199,27 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
 
   G4OpticalSurface* surfCathode = (new CathodeSurface())->GetSurface();
   G4OpticalSurface* surfDiel = (new DielectricSurface())->GetSurface();
+  G4OpticalSurface* surfTybek = (new TybekSurface())->GetSurface();
+  G4OpticalSurface* surfBC620 = (new BC620Surface())->GetSurface();
+
+  
   G4OpticalSurface* surfMirror = (new MirrorSurface())->GetSurface(); //鏡面反射
   G4OpticalSurface* surfDiffuse = (new DiffuseSurface())->GetSurface(); //乱反射
-
+  
 
   //[SkinSurface] 全体コーティング
   new G4LogicalSkinSurface("ScintiSkin", LogVol_Scinti, surfMirror);
   new G4LogicalSkinSurface("GuideSkin", LogVol_Guide, surfMirror);
+  //new G4LogicalSkinSurface("ScintiSkin", LogVol_Scinti, surfBC620);
+  //new G4LogicalSkinSurface("GuideSkin", LogVol_Guide, surfBC620);
   new G4LogicalSkinSurface("CathodeSkin", LogVol_Cathode, surfCathode);
 
   //[BorderSurface] 接合面の上書き
   // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+  
+  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
 
   // ②【後面】シンチ ⇄ ライトガイド間の光は、スキンを「グリス」で上書き（双方向）
   new G4LogicalBorderSurface("ScintiToGuide", physScinti, physGuide, surfDiel);

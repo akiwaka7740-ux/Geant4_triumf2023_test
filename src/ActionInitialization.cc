@@ -1,5 +1,6 @@
 #include "ActionInitialization.hh"
 #include "EventAction.hh"
+#include "SteppingAction.hh"
 
 ActionInitialization::ActionInitialization()
 {}
@@ -17,15 +18,17 @@ void ActionInitialization::BuildForMaster () const
 
 
 void ActionInitialization::Build () const
-{
-
+{   
     EventAction* eventAction = new EventAction();
     SetUserAction(eventAction);
-    
+
     PrimaryGenerator *generator = new PrimaryGenerator();
     SetUserAction(generator);
 
     RunAction *runAction = new RunAction(eventAction);
     SetUserAction(runAction);
+
+    SteppingAction *steppingAction = new SteppingAction();
+    SetUserAction(steppingAction);
 
 }
