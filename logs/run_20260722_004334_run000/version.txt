@@ -1,0 +1,29 @@
+GIT_COMMIT=2c11770c9f8b44e2831b7818276e1fbdf6b495bc
+GIT_BRANCH=main
+
+[git status --short]
+ M .vscode/c_cpp_properties.json
+ M LearningMaterial/VSCode_Cpp_IntelliSense_Setup.md
+ M include/ActionInitialization.hh
+ M include/AnalysisOutput.hh
+ M include/PrimaryGenerator.hh
+ M include/RunAction.hh
+ M include/ScintiSD.hh
+ M macros/run.mac
+ M sim.cc
+ M src/ActionInitialization.cc
+ M src/AnalysisOutput.cc
+ M src/PrimaryGenerator.cc
+ M src/RunAction.cc
+ M src/ScintiSD.cc
+?? analysis/
+?? include/RunConfig.hh
+?? logs/run_20260720_130117_run000/
+?? logs/run_20260720_131718_run000/
+?? logs/run_20260720_132914_run000/
+?? logs/run_20260720_141325_run000/
+?? logs/run_20260721_171202_run000/
+?? logs/run_20260721_171308_run000/
+?? logs/run_20260722_003339_run000/
+?? logs/run_20260722_004334_run000/
+?? src/RunConfig.cc

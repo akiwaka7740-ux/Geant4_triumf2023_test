@@ -10,11 +10,12 @@
 
 
 class EventAction;
+class RunConfig;
 
 
 class RunAction : public G4UserRunAction{
     public:
-        RunAction(EventAction* eventAction);
+        RunAction(EventAction* eventAction, RunConfig* runConfig);
         ~RunAction();
 
         virtual void BeginOfRunAction(const G4Run *);
@@ -23,6 +24,7 @@ class RunAction : public G4UserRunAction{
     private:
         EventAction* fEventAction;
         AnalysisOutput fAnalysisOutput;
+        RunConfig* fRunConfig;
 };
 
 #endif

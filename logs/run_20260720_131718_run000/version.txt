@@ -1,0 +1,7 @@
+GIT_COMMIT=2c11770c9f8b44e2831b7818276e1fbdf6b495bc
+GIT_BRANCH=main
+
+[git status --short]
+ M src/RunAction.cc
+?? logs/run_20260720_130117_run000/
+?? logs/run_20260720_131718_run000/

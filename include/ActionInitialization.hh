@@ -5,6 +5,7 @@
 
 #include "PrimaryGenerator.hh"
 #include "RunAction.hh"
+#include "RunConfig.hh"
 
 class ActionInitialization : public G4VUserActionInitialization
 {
@@ -14,6 +15,10 @@ class ActionInitialization : public G4VUserActionInitialization
 
         virtual void BuildForMaster() const;
         virtual void Build() const;
+
+    private:
+        RunConfig *fRunConfig = nullptr;
+
 };
 
 #endif

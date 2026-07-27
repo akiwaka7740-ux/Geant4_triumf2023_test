@@ -11,21 +11,23 @@
 
 class G4ParticleGun;
 class PrimaryGeneratorMessenger; // 前方宣言
+class RunConfig;
 
 class PrimaryGenerator : public G4VUserPrimaryGeneratorAction
 {
     public:
-     PrimaryGenerator();
+     PrimaryGenerator(RunConfig* runConfig);
      ~PrimaryGenerator();
 
-     virtual void GeneratePrimaries(G4Event *);
+     virtual void GeneratePrimaries(G4Event *) override;
 
-     void SetSourceType(G4String type) { fSourceType = type; } // ソースタイプを設定するメソッド
+     void SetSourceType(G4String type); // ソースタイプを設定するメソッド
 
     private:
-        G4ParticleGun *fParticleGun;
-        PrimaryGeneratorMessenger *fMessenger; // メッセンジャーのポインタ
-        G4String fSourceType; // ソースタイプを保持するメンバ変数
+        G4ParticleGun *fParticleGun = nullptr;
+        PrimaryGeneratorMessenger *fMessenger = nullptr; 
+        RunConfig *fRunConfig = nullptr; 
+
 };
 
 

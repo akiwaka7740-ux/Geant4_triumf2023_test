@@ -16,6 +16,7 @@ public:
         G4double edep,
         G4double evis,
         G4double generatedPhotons,
+        G4double firstHitTime,
         G4int hitCount
     );
 
@@ -38,6 +39,7 @@ private:
     G4int fScintiEvis = -1;
     G4int fScintiPhotons = -1;
     G4int fScintiInteractionCount = -1;
+    G4int fScintiHitTime = -1;
     G4int fScintiHitPosGlobal = -1;
     G4int fScintiHitPosLocal = -1;
     G4int fScintiHitPosRadius = -1;

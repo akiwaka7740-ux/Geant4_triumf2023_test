@@ -55,10 +55,20 @@ cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
         "${workspaceFolder}/include",
         "${workspaceFolder}/incase",
         "/home/hashizume/Geant4/install/include",
-        "/home/hashizume/Geant4/install/include/Geant4"
+        "/home/hashizume/Geant4/install/include/Geant4",
+        "/usr/local/root_6.36.06/include"
       ],
+      "browse": {
+        "path": [
+          "${workspaceFolder}/include",
+          "/home/hashizume/Geant4/install/include",
+          "/home/hashizume/Geant4/install/include/Geant4",
+          "/usr/local/root_6.36.06/include",
+          "/usr/local/root_6.36.06/include/**"
+        ]
+      },
       "compilerPath": "/usr/bin/g++",
-      "cppStandard": "c++17",
+      "cppStandard": "c++20",
       "intelliSenseMode": "linux-gcc-x64"
     }
   ],
@@ -77,6 +87,32 @@ cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 - プロジェクトや外部ライブラリのヘッダが置かれているディレクトリを指定します。
 - ここで `include/` や Geant4 のインクルードパスを追加することで、`#include <...>` や `#include "..."` を解決しやすくなります。
+- ROOT のヘッダを使う場合は、ROOT の include ディレクトリを追加します。
+- 例えば `#include <TFile.h>` や `#include <ROOT/RDataFrame.hxx>` を使う場合、次の親ディレクトリを指定します。
+
+```json
+"/usr/local/root_6.36.06/include"
+```
+
+- `#include <ROOT/RDataFrame.hxx>` のために `/usr/local/root_6.36.06/include/ROOT` を指定するのではなく、その親である `/usr/local/root_6.36.06/include` を指定します。
+
+#### `browse.path`
+
+- IntelliSense のシンボル検索やヘッダ探索に使われるパスです。
+- `includePath` と同じ階層、つまり `"name"`, `"compileCommands"`, `"includePath"` と同じ `{ ... }` の中に書きます。
+- `includePath` の中に `browse` を入れてはいけません。
+- ROOT のようにサブディレクトリ配下にも多くのヘッダがある場合は、次のように `/**` 付きのパスも入れると索引されやすくなります。
+
+```json
+"browse": {
+  "path": [
+    "${workspaceFolder}/include",
+    "/home/hashizume/Geant4/install/include/Geant4",
+    "/usr/local/root_6.36.06/include",
+    "/usr/local/root_6.36.06/include/**"
+  ]
+}
+```
 
 #### `compilerPath`
 
@@ -87,6 +123,99 @@ cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 - C++ の標準規格を指定します。
 - Geant4 を扱う場合、`c++17` などがよく使われます。
+- ただし、ROOT を一緒に使う場合は、ROOT がどの C++ 標準でビルドされているかに合わせる必要があります。
+- 今回の環境では `/usr/local/root_6.36.06/bin/root-config --cflags` が `-std=c++20` を返すため、VS Code 側も `"cppStandard": "c++20"` に合わせます。
+- `TFile.h` のような基本的なヘッダは `c++17` 設定でも読めることがありますが、`ROOT/RDataFrame.hxx` はより新しい C++ 機能や ROOT 内部ヘッダを多く使うため、C++ 標準が合っていないと IntelliSense が失敗しやすくなります。
+
+## ROOT 解析マクロで追加した設定
+
+今回、Geant4 の出力 ROOT ファイルを解析する ROOT マクロを書くために、VS Code に ROOT のヘッダを認識させました。
+
+確認した ROOT の場所は次の通りです。
+
+```bash
+/usr/local/root_6.36.06/bin/root-config --incdir
+```
+
+結果として、ROOT の include ディレクトリは次の場所でした。
+
+```text
+/usr/local/root_6.36.06/include
+```
+
+`TFile.h`, `TTree.h`, `TH1.h` はこの直下にあります。
+
+```text
+/usr/local/root_6.36.06/include/TFile.h
+/usr/local/root_6.36.06/include/TTree.h
+/usr/local/root_6.36.06/include/TH1.h
+```
+
+一方、`RDataFrame` は `ROOT/` サブディレクトリの下にあります。
+
+```text
+/usr/local/root_6.36.06/include/ROOT/RDataFrame.hxx
+```
+
+そのため、マクロでは次のように include します。
+
+```cpp
+#include <TFile.h>
+#include <TTree.h>
+#include <ROOT/RDataFrame.hxx>
+```
+
+このとき `.vscode/c_cpp_properties.json` では、次のように ROOT include の親ディレクトリを指定します。
+
+```json
+"includePath": [
+  "${workspaceFolder}/include",
+  "/home/hashizume/Geant4/install/include/Geant4",
+  "/usr/local/root_6.36.06/include"
+],
+"browse": {
+  "path": [
+    "${workspaceFolder}/include",
+    "/home/hashizume/Geant4/install/include/Geant4",
+    "/usr/local/root_6.36.06/include",
+    "/usr/local/root_6.36.06/include/**"
+  ]
+},
+"cppStandard": "c++20"
+```
+
+### `TFile.h` は読めるのに `ROOT/RDataFrame.hxx` が読めない理由
+
+`TFile.h` は ROOT include ディレクトリ直下にある古くからの基本ヘッダです。
+
+```text
+/usr/local/root_6.36.06/include/TFile.h
+```
+
+一方、`RDataFrame.hxx` は次のように `ROOT/` サブディレクトリの下にあります。
+
+```text
+/usr/local/root_6.36.06/include/ROOT/RDataFrame.hxx
+```
+
+さらに `RDataFrame.hxx` は内部で多くの ROOT RDF ヘッダや比較的新しい C++ 機能を使います。そのため、単に `TFile.h` が読めているだけでは、`RDataFrame` まで正しく IntelliSense できるとは限りません。
+
+今回の ROOT 6.36.06 は `root-config --cflags` で `-std=c++20` を返すため、VS Code 側の `cppStandard` も `c++20` に合わせる必要があります。
+
+## ROOT マクロが `compile_commands.json` に載らないことがある
+
+このプロジェクトの `CMakeLists.txt` では、主に `sim.cc` と `src/*.cc` がビルド対象になっています。
+
+ROOT 解析マクロを `analysis/*.C` に置いた場合、そのマクロは Geant4 シミュレーション本体のビルド対象ではないため、`build/compile_commands.json` に載らないことがあります。
+
+その場合、VS Code は `compile_commands.json` から解析情報を取れないため、`.vscode/c_cpp_properties.json` の `includePath` や `browse.path` がより重要になります。
+
+ROOT マクロを VS Code で開いたときに include エラーが出る場合は、次も確認します。
+
+- VS Code で開いているフォルダがプロジェクトルートになっているか
+- `.vscode/c_cpp_properties.json` がそのワークスペースで読まれているか
+- 右下の言語モードが `C++` になっているか
+- `C/C++: Log Diagnostics` で、そのファイルに使われている include path を確認する
 
 ## 3. IntelliSense のキャッシュをリセットした
 

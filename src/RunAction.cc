@@ -1,7 +1,27 @@
+#include <cstdlib>
+
 #include "RunAction.hh"
 #include "EventAction.hh"
 
-RunAction::RunAction(EventAction *eventAction) : fEventAction(eventAction)
+
+namespace {
+G4String GetOutputRootFileName(const G4Run* run)
+{
+    //環境変数が定義されている場合はそれを使用する
+    const char* envOutput = std::getenv("G4_OUTPUT_ROOT");
+    if (envOutput && envOutput[0] != '\0') {
+        return G4String(envOutput);
+    }
+
+    std::stringstream strRunID;
+    strRunID << run->GetRunID();
+    return "../root/output" + strRunID.str() + ".root";
+}
+
+}
+
+
+RunAction::RunAction(EventAction *eventAction, RunConfig* runConfig) : fEventAction(eventAction), fRunConfig(runConfig)
 {
 
     fAnalysisOutput.Book(fEventAction);
@@ -17,13 +37,8 @@ RunAction::~RunAction()
 void RunAction::BeginOfRunAction(const G4Run *run)
 {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
+    analysisManager->OpenFile(GetOutputRootFileName(run));
 
-    G4int runID = run->GetRunID();
-
-    std::stringstream strRunID;
-    strRunID << runID;
-
-    analysisManager->OpenFile("../root/output" + strRunID.str() + ".root");
 }
 
 void RunAction::EndOfRunAction(const G4Run *run)

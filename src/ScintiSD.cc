@@ -18,6 +18,7 @@ ScintiSD::ScintiSD(G4String name)
    fTotalEdep(0.0),
    fTotalEvis(0.0),
    fGeneratedPhotons(0.0),
+   fFirstHitTime(-1.0),
    fFirstHitPosGlobal(-99999.0, -99999.0, -99999.0), 
    fFirstHitPosLocal(-99999.0, -99999.0, -99999.0),
    fNeutronInteractionCount(0)
@@ -30,6 +31,7 @@ void ScintiSD::Initialize(G4HCofThisEvent*) {
     fTotalEdep = 0.0;
     fTotalEvis = 0.0;
     fGeneratedPhotons = 0.0;
+    fFirstHitTime = -1.0;
     fFirstHitPosGlobal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
     fFirstHitPosLocal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
     fNeutronInteractionCount = 0;
@@ -61,7 +63,8 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
         // 最初の中性子hadronic反応位置
         if (fNeutronInteractionCount == 0) {
             // preとpostの中点を反応点とする
-            fFirstHitPosGlobal = (prePoint->GetPosition() + postPoint->GetPosition())/2.0;
+            fFirstHitPosGlobal = postPoint->GetPosition();
+            fFirstHitTime = postPoint->GetGlobalTime();
                 
             auto touchable =
                 prePoint->GetTouchable();
@@ -130,5 +133,5 @@ void ScintiSD::EndOfEvent(G4HCofThisEvent*) {
     auto output = eventAction->GetAnalysisOutput();
     if(!output) return;
 
-    output->FillScinti(fTotalEdep, fTotalEvis, fGeneratedPhotons, fNeutronInteractionCount);
+    output->FillScinti(fTotalEdep, fTotalEvis, fGeneratedPhotons, fFirstHitTime, fNeutronInteractionCount);
 }

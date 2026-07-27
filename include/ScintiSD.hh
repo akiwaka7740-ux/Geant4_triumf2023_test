@@ -23,6 +23,7 @@ private:
     G4double fTotalEdep;
     G4double fTotalEvis;
     G4double fGeneratedPhotons;
+    G4double fFirstHitTime;
     G4ThreeVector fFirstHitPosGlobal;
     G4ThreeVector fFirstHitPosLocal;
     G4int fNeutronInteractionCount;

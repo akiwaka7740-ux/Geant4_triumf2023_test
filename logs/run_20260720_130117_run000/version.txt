@@ -1,0 +1,5 @@
+GIT_COMMIT=2c11770c9f8b44e2831b7818276e1fbdf6b495bc
+GIT_BRANCH=main
+
+[git status --short]
+?? logs/run_20260720_130117_run000/

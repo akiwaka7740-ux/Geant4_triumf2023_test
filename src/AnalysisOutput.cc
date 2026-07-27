@@ -18,6 +18,9 @@ void AnalysisOutput::Book(EventAction* eventAction)
     fScintiInteractionCount =
         analysisManager->CreateNtupleIColumn("Scinti_InteractionCount");
 
+    fScintiHitTime =
+        analysisManager->CreateNtupleDColumn("Scinti_HitTime");
+
     fScintiHitPosGlobal =
         analysisManager->CreateNtupleDColumn(
             "Scinti_HitPos_Global",
@@ -89,13 +92,14 @@ void AnalysisOutput::Book(EventAction* eventAction)
     analysisManager->FinishNtuple(0);
 }
 
-void AnalysisOutput::FillScinti(G4double edep, G4double evis, G4double generatedPhotons, G4int neutronInteractionCount)
+void AnalysisOutput::FillScinti(G4double edep, G4double evis, G4double generatedPhotons, G4double firstHitTime, G4int neutronInteractionCount)
 {
     auto analysisManager = G4AnalysisManager::Instance();
 
     analysisManager->FillNtupleDColumn(fScintiEdep, edep);
     analysisManager->FillNtupleDColumn(fScintiEvis, evis);
     analysisManager->FillNtupleDColumn(fScintiPhotons, generatedPhotons);
+    analysisManager->FillNtupleDColumn(fScintiHitTime, firstHitTime);
     analysisManager->FillNtupleIColumn(fScintiInteractionCount, neutronInteractionCount);
 }
 
