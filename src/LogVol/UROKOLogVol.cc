@@ -186,8 +186,8 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
 
   // PMT は並列に2つ配置
   double z_pmt = z_Scinti + thickness_UROKO + guide_L_UROKO + guide_S_UROKO + (PMT_L_UROKO / 2.0);
-  G4VPhysicalVolume* physPMT1 = new G4PVPlacement(Move(-PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT1", LogVol, false, 1, checkOverlaps);
-  G4VPhysicalVolume* physPMT2 = new G4PVPlacement(Move( PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT2", LogVol, false, 2, checkOverlaps);
+  G4VPhysicalVolume* physPMT0 = new G4PVPlacement(Move(-PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT0", LogVol, false, 0, checkOverlaps);
+  G4VPhysicalVolume* physPMT1 = new G4PVPlacement(Move( PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT1", LogVol, false, 1, checkOverlaps);
 
   // Cathode は PMT の「内部」に配置 (※配置先が LogVol ではなく LogVol_PMT になるのがポイント)
   double z_cathode = -(PMT_L_UROKO / 2.0) + 3.0 * (cathode_T_UROKO / 2.0);
@@ -215,9 +215,9 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   new G4LogicalSkinSurface("CathodeSkin", LogVol_Cathode, surfCathode);
 
   //[BorderSurface] 接合面の上書き
-  // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
-  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+  // ①【前面】シンチからバンパー へ進む光だけ、鏡面スキンを「乱反射」で上書き
+  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
   
   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
 
@@ -226,11 +226,11 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
   new G4LogicalBorderSurface("GuideToScinti", physGuide, physScinti, surfDiel);
 
   // ③【出口】ライトガイド ⇄ PMTガラス間の光も「グリス」で上書き（双方向）
+  new G4LogicalBorderSurface("GuideToPMT0", physGuide, physPMT0, surfDiel);
+  new G4LogicalBorderSurface("PMT0ToGuide", physPMT0, physGuide, surfDiel);
+
   new G4LogicalBorderSurface("GuideToPMT1", physGuide, physPMT1, surfDiel);
   new G4LogicalBorderSurface("PMT1ToGuide", physPMT1, physGuide, surfDiel);
-
-  new G4LogicalBorderSurface("GuideToPMT2", physGuide, physPMT2, surfDiel);
-  new G4LogicalBorderSurface("PMT2ToGuide", physPMT2, physGuide, surfDiel);
 
 }
 

@@ -1,0 +1,5 @@
+# run_neutron.mac の内容
+/run/initialize
+/mygen/sourceType neutron
+/run/printProgress 100000
+/run/beamOn 10000000

@@ -1,0 +1,52 @@
+diff --git a/macros/run.mac b/macros/run.mac
+index 1294dd0..6527a1b 100644
+--- a/macros/run.mac
++++ b/macros/run.mac
+@@ -1,5 +1,5 @@
+ # run.mac の内容
+ /run/initialize
+ /mygen/sourceType neutron
+-/run/printProgress 1000000
+-/run/beamOn 20000
++/run/printProgress 10000
++/run/beamOn 100000
+diff --git a/src/LogVol/UROKOLogVol.cc b/src/LogVol/UROKOLogVol.cc
+index c33699b..07f9bee 100644
+--- a/src/LogVol/UROKOLogVol.cc
++++ b/src/LogVol/UROKOLogVol.cc
+@@ -216,8 +216,8 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+ 
+   //[BorderSurface] 接合面の上書き
+   // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
+-  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
++  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
++  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+   
+   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
+ 
+diff --git a/src/PhysicsList.cc b/src/PhysicsList.cc
+index 8322942..eecc01b 100644
+--- a/src/PhysicsList.cc
++++ b/src/PhysicsList.cc
+@@ -7,7 +7,7 @@ PhysicsList::PhysicsList(): FTFP_BERT_HP() //親クラスのコンストラク
+ {
+     RegisterPhysics(new G4RadioactiveDecayPhysics());
+     //RegisterPhysics(new G4DecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
+-    RegisterPhysics(new G4EmLivermorePhysics());
++    ReplacePhysics(new G4EmLivermorePhysics()); //すでに登録されているEMstandardと交換する
+     RegisterPhysics(new G4OpticalPhysics());
+ }
+ 
+diff --git a/src/RunConfig.cc b/src/RunConfig.cc
+index 6250c3e..8902d7d 100644
+--- a/src/RunConfig.cc
++++ b/src/RunConfig.cc
+@@ -21,6 +21,7 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+     }
+     */
+ 
++    
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+         fEnergy = 1.00 * MeV;

@@ -19,6 +19,8 @@ class LigLogVol
     G4VSolid* Solid;
     G4LogicalVolume* LogVol;
     G4LogicalVolume* LogVol0; // Scintillator (SD登録用)
+    G4LogicalVolume* LogVol1; // Cathode (SD登録用)
+    G4LogicalVolume* LogVol2; // PMT (SD登録用)
 
   public:
      LigLogVol(G4String Name="Lig", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
@@ -26,7 +28,9 @@ class LigLogVol
 
     G4VSolid* GetSolid()         { return Solid;  }
     G4LogicalVolume* GetLogicalVolume() { return LogVol; }
-    G4LogicalVolume* GetScintiVolume()  { return LogVol0; } // SD登録用のゲッター
+    G4LogicalVolume* GetScintiVolume()  { return LogVol0; } 
+    G4LogicalVolume* GetCathodeVolume() { return LogVol1; } 
+    G4LogicalVolume* GetPMTVolume() {return LogVol2; }
 };
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......

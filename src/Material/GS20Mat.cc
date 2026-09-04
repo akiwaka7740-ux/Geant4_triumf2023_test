@@ -51,6 +51,32 @@ GS20Mat::GS20Mat() {
     fMaterial->AddMaterial(Al2O3, 18.0 * perCent);
     fMaterial->AddMaterial(Ce2O3,  4.0 * perCent);
     fMaterial->AddMaterial(Li2O,  15.5 * perCent);
+
+    G4MaterialPropertiesTable* mpt = new G4MaterialPropertiesTable();
+
+    //本来はエネルギーでパラメータを登録する必要がある
+    //ヘルパー関数：[波長(nm), 値] の表からGeant4用の物性配列を自動登録する
+    auto AddPropertyFromNm = [&](const char* key, const std::vector<std::pair<double, double>>& data) {
+        std::vector<G4double> energies;
+        std::vector<G4double> values;
+
+        // Geant4は「エネルギー昇順」必須。データシートの「波長昇順」を後ろから読むとちょうどエネルギー昇順になる
+        for (auto it = data.rbegin(); it != data.rend(); ++it) //rbegin は reverse beginを指す（最後尾の要素からスタートする）
+        {
+            double nm = it->first;
+            energies.push_back((1239.84193 / nm) * eV); // λ(nm) -> E(eV) 変換
+            values.push_back(it->second);
+        }
+        mpt->AddProperty(key, energies, values, false, true);//4=新規か、5=spline補完を適用するか
+    };
+
+    //　光子の発生数
+    mpt->AddConstProperty("SCINTILLATIONYIELD", 10000. * 0.25 /MeV);   //カタログ上はplasticの20~30%
+    //　光子発生のばらつき（ポアソン分布）  
+    mpt->AddConstProperty("RESOLUTIONSCALE", 1.0); 
+    //単一の成分のみと仮定
+    mpt->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 70*ns);    
+
 }
 
 GS20Mat::~GS20Mat() {

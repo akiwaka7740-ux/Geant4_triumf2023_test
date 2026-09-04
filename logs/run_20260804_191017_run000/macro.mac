@@ -1,0 +1,5 @@
+# run.mac の内容
+/run/initialize
+/mygen/sourceType electron
+/run/printProgress 10000
+/run/beamOn 100000

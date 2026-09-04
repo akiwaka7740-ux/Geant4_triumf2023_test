@@ -1,0 +1,38 @@
+GIT_COMMIT=9a274da8be191f5a6ae88b0ba19043235fc3cfee
+GIT_BRANCH=main
+
+[git status --short]
+ M analysis/PlotFigure.C
+ M macros/run.mac
+ M src/DetectorConstruction.cc
+ M src/LogVol/UROKOLogVol.cc
+ M src/PhysicsList.cc
+ M src/PrimaryGeneratorMessenger.cc
+ M src/RunConfig.cc
+ M src/Surface/UROKO/BC620Surface.cc
+?? Inspect/
+?? LearningMaterial/Cpp_Ceil_And_SizeT.md
+?? analysis/CompareAveragePhotonDistribution.C
+?? analysis/CompareOneEventPhotonDistribution.C
+?? analysis/ComparePhotons.C
+?? analysis/PMTAccumulation.C
+?? analysis/TimingByThreshold.C
+?? logs/run_20260728_133118_run000/
+?? logs/run_20260728_133521_run000/
+?? logs/run_20260728_133759_run000/
+?? logs/run_20260728_133921_run000/
+?? logs/run_20260728_135323_run000/
+?? logs/run_20260728_141732_run000/
+?? logs/run_20260728_161723_run000/
+?? logs/run_20260804_144905_run000/
+?? logs/run_20260804_150125_run000/
+?? logs/run_20260804_150508_run000/
+?? logs/run_20260804_150952_run000/
+?? logs/run_20260804_191017_run000/
+?? logs/run_20260804_192035_run000/
+?? logs/run_20260805_185811_run000/
+?? logs/run_20260809_164042_run000/
+?? logs/run_20260809_164615_run000/
+?? macros/run_electron.mac
+?? macros/run_gamma.mac
+?? macros/run_neutron.mac

@@ -3,63 +3,72 @@
 
 #include "globals.hh"
 
-class EventAction;
+#include <vector>
+
+struct ScintiEventData;
+struct PmtEventData;
+struct PmtChannelKey;
 
 class AnalysisOutput {
 public:
     AnalysisOutput() = default;
     ~AnalysisOutput() = default;
 
-    void Book(EventAction* eventAction);
+    void Book();
 
-    void FillScinti(
-        G4double edep,
-        G4double evis,
-        G4double generatedPhotons,
-        G4double firstHitTime,
-        G4int hitCount
+    void FillChannelRow(
+        G4int runId,
+        G4int eventId,
+        const PmtChannelKey& channelKey,
+        const ScintiEventData& scintiData,
+        const PmtEventData& pmtData,
+        G4int sumArrivedPhotons,
+        G4int sumDetectedPhotons,
+        G4double arrivalEfficiency,
+        G4double detectionEfficiency,
+        G4double sumArrivalEfficiency,
+        G4double sumDetectionEfficiency
     );
-
-    void FillPMTPhotons(
-        G4int pmt1Photons,
-        G4int pmt2Photons
-    );
-
-    void FillEventSummary(
-        G4double scintiHitRadius,
-        G4double pmt1Efficiency,
-        G4double pmt2Efficiency
-    );
-
-    void AddRow();
 
 private:
-    //以下は物理量に紐づくID(物理量の値そのものではないので注意)
+    G4int fNtupleId = -1;
+
+    G4int fRunId = -1;
+    G4int fEventId = -1;
+    G4int fDetectorCopyNo = -1;
+    G4int fPmtCopyNo = -1;
+    G4int fIsDetectorRepresentative = -1;
+
     G4int fScintiEdep = -1;
     G4int fScintiEvis = -1;
-    G4int fScintiPhotons = -1;
-    G4int fScintiInteractionCount = -1;
-    G4int fScintiHitTime = -1;
-    G4int fScintiHitPosGlobal = -1;
-    G4int fScintiHitPosLocal = -1;
-    G4int fScintiHitPosRadius = -1;
+    G4int fGeneratedPhotons = -1;
+    G4int fNeutronInteractionCount = -1;
+    G4int fFirstHitTime = -1;
 
-    G4int fPMTSumPhotons = -1;
-    G4int fPMTSumEfficiency = -1;
-    G4int fPMT1Photons = -1;
-    G4int fPMT1Efficiency = -1;
-    G4int fPMT2Photons = -1;
-    G4int fPMT2Efficiency = -1;
+    G4int fFirstHitGlobalX = -1;
+    G4int fFirstHitGlobalY = -1;
+    G4int fFirstHitGlobalZ = -1;
 
-    G4int fPMT1HitTimes = -1;
-    G4int fPMT1HitPosX = -1;
-    G4int fPMT1HitPosY = -1;
-    G4int fPMT1HitPosZ = -1;
+    G4int fFirstHitLocalX = -1;
+    G4int fFirstHitLocalY = -1;
+    G4int fFirstHitLocalZ = -1;
+    G4int fFirstHitRadius = -1;
 
-    G4int fPMT2HitTimes = -1;
-    G4int fPMT2HitPosX = -1;
-    G4int fPMT2HitPosY = -1;
-    G4int fPMT2HitPosZ = -1;
+    G4int fArrivedPhotons = -1;
+    G4int fDetectedPhotons = -1;
+    G4int fArrivalEfficiency = -1;
+    G4int fDetectionEfficiency = -1;
+
+    G4int fSumArrivedPhotons = -1;
+    G4int fSumDetectedPhotons = -1;
+    G4int fSumArrivalEfficiency = -1;
+    G4int fSumDetectionEfficiency = -1;
+
+    // vector branchが参照する実体
+    std::vector<G4double> fHitTimes;
+    std::vector<G4double> fHitPosX;
+    std::vector<G4double> fHitPosY;
+    std::vector<G4double> fHitPosZ;
 };
 
 #endif

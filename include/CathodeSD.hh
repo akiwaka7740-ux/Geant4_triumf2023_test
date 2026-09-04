@@ -1,27 +1,45 @@
 #ifndef CATHODESD_HH
 #define CATHODESD_HH
 
-#include "G4VSensitiveDetector.hh"
+#include "DetectorChannelKey.hh"
 
-class G4OpBoundaryProcess;
+#include "G4VSensitiveDetector.hh"
+#include "G4ThreeVector.hh"
+
+#include <map>
+#include <set>
+#include <vector>
+
+struct PmtEventData {
+    G4int arrivedPhotons = 0;
+    G4int detectedPhotons = 0;
+
+    std::vector<G4double> hitTimes;
+    std::vector<G4ThreeVector> hitPositions;
+};
+
 class G4Track;
 
 class CathodeSD : public G4VSensitiveDetector {
 public:
+     using PmtDataMap = std::map<PmtChannelKey,PmtEventData>;
+
     CathodeSD(G4String name);
     ~CathodeSD() override = default;
 
     void Initialize(G4HCofThisEvent* hitCollection) override;
-    G4bool ProcessHits(G4Step* aStep, G4TouchableHistory* ROhist) override;
+    G4bool ProcessHits(G4Step* aStep, G4TouchableHistory* ROhist) override; //毎回stepごとに呼ばれる
+    G4bool ProcessBoundaryHit(const G4Step* step);
     void EndOfEvent(G4HCofThisEvent* hitCollection) override;
-    G4double GetArrivedPhotons(G4int pmtIndex) const { return fPhotonArrivedCount[pmtIndex]; }
-    G4double GetDetectedPhotons(G4int pmtIndex) const { return fPhotonDetectedCount[pmtIndex];}
+
+    const PmtDataMap& GetPmtData() const {return fPmtData;}
+    const PmtEventData* FindPmtData(const PmtChannelKey& channelKey) const;
+
+    void RegisterChannel(const PmtChannelKey& channelKey);
 
 private:
-    G4int fPhotonArrivedCount[2];
-    G4int fPhotonDetectedCount[2];
-    //ベクトル要素についてはEventActionの管轄
+    std::set<PmtChannelKey> fRegisteredChannels;
+    PmtDataMap fPmtData;
 
-    G4OpBoundaryProcess* fBoundary = nullptr;
 };
 #endif

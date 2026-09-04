@@ -4,6 +4,12 @@
 #include <TH1D.h>
 #include <TH2D.h>
 
+/*
+テスト結果をPDFに出力する。
+簡易的に色々な物理量を確認するために使用する。
+ただし、1.5m, 1MeVに最適化されているので、汎用性はない。
+上記の設定は吉岡さんの卒論に一致する
+*/
 
 
 TString MakePdfPath(TString filename){
@@ -14,12 +20,65 @@ TString MakePdfPath(TString filename){
     return "logs/" + base + "/" + "results.pdf";
 }
 
+bool CanWritePdf(const TString& pdfPath)
+{
+    const TString outputDirectory = gSystem->DirName(pdfPath);
+
+    // AccessPathName() はアクセスできない場合に true を返す
+    if (gSystem->AccessPathName(outputDirectory, kFileExists)) {
+        std::cerr
+            << "[PlotFigure] Error: PDF出力ディレクトリが存在しません: "
+            << outputDirectory.Data()
+            << "\nCurrent working directory: "
+            << gSystem->WorkingDirectory()
+            << '\n';
+
+        return false;
+    }
+
+    // ディレクトリでは、書き込み権限と実行（検索）権限の両方が必要
+    if (gSystem->AccessPathName(outputDirectory, kWritePermission) ||
+        gSystem->AccessPathName(outputDirectory, kExecutePermission)) {
+
+        std::cerr
+            << "[PlotFigure] Error: PDF出力ディレクトリに書き込めません: "
+            << outputDirectory.Data()
+            << '\n';
+
+        return false;
+    }
+
+    // 既存のPDFを上書きできるか確認
+    const bool pdfAlreadyExists =
+        !gSystem->AccessPathName(pdfPath, kFileExists);
+
+    if (pdfAlreadyExists &&
+        gSystem->AccessPathName(pdfPath, kWritePermission)) {
+
+        std::cerr
+            << "[PlotFigure] Error: 既存のPDFを上書きできません: "
+            << pdfPath.Data()
+            << '\n';
+
+        return false;
+    }
+
+    return true;
+}
+
 std::vector<ROOT::RDF::RResultPtr<TH1D>> gHistograms1D;
 std::vector<ROOT::RDF::RResultPtr<TH2D>> gHistograms2D;
 std::vector<ROOT::RDF::RResultPtr<TH3D>> gHistograms3D;
 
 
 void PlotFigure(TString filename){
+
+    //出力ディレクトリが存在するかを確認
+    TString pdfPath = MakePdfPath(filename);
+    if(!CanWritePdf(pdfPath)){
+        return;
+    }   
+
     ROOT::RDataFrame df("tree",filename);
 
     auto selected = df
@@ -147,7 +206,7 @@ void PlotFigure(TString filename){
     auto report = selected.Report();
     report->Print();
 
-    TString pdfPath = MakePdfPath(filename);
+
 
     TCanvas *c1 = new TCanvas("c1","c1", 800, 600);
     hScintiEdep->Draw();

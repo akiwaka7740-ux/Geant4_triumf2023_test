@@ -1,0 +1,1954 @@
+diff --git a/analysis/PlotFigure.C b/analysis/PlotFigure.C
+index 00b0cdd..6d28560 100644
+--- a/analysis/PlotFigure.C
++++ b/analysis/PlotFigure.C
+@@ -4,6 +4,12 @@
+ #include <TH1D.h>
+ #include <TH2D.h>
+ 
++/*
++テスト結果をPDFに出力する。
++簡易的に色々な物理量を確認するために使用する。
++ただし、1.5m, 1MeVに最適化されているので、汎用性はない。
++上記の設定は吉岡さんの卒論に一致する
++*/
+ 
+ 
+ TString MakePdfPath(TString filename){
+@@ -14,12 +20,65 @@ TString MakePdfPath(TString filename){
+     return "logs/" + base + "/" + "results.pdf";
+ }
+ 
++bool CanWritePdf(const TString& pdfPath)
++{
++    const TString outputDirectory = gSystem->DirName(pdfPath);
++
++    // AccessPathName() はアクセスできない場合に true を返す
++    if (gSystem->AccessPathName(outputDirectory, kFileExists)) {
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリが存在しません: "
++            << outputDirectory.Data()
++            << "\nCurrent working directory: "
++            << gSystem->WorkingDirectory()
++            << '\n';
++
++        return false;
++    }
++
++    // ディレクトリでは、書き込み権限と実行（検索）権限の両方が必要
++    if (gSystem->AccessPathName(outputDirectory, kWritePermission) ||
++        gSystem->AccessPathName(outputDirectory, kExecutePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリに書き込めません: "
++            << outputDirectory.Data()
++            << '\n';
++
++        return false;
++    }
++
++    // 既存のPDFを上書きできるか確認
++    const bool pdfAlreadyExists =
++        !gSystem->AccessPathName(pdfPath, kFileExists);
++
++    if (pdfAlreadyExists &&
++        gSystem->AccessPathName(pdfPath, kWritePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: 既存のPDFを上書きできません: "
++            << pdfPath.Data()
++            << '\n';
++
++        return false;
++    }
++
++    return true;
++}
++
+ std::vector<ROOT::RDF::RResultPtr<TH1D>> gHistograms1D;
+ std::vector<ROOT::RDF::RResultPtr<TH2D>> gHistograms2D;
+ std::vector<ROOT::RDF::RResultPtr<TH3D>> gHistograms3D;
+ 
+ 
+ void PlotFigure(TString filename){
++
++    //出力ディレクトリが存在するかを確認
++    TString pdfPath = MakePdfPath(filename);
++    if(!CanWritePdf(pdfPath)){
++        return;
++    }   
++
+     ROOT::RDataFrame df("tree",filename);
+ 
+     auto selected = df
+@@ -147,7 +206,7 @@ void PlotFigure(TString filename){
+     auto report = selected.Report();
+     report->Print();
+ 
+-    TString pdfPath = MakePdfPath(filename);
++
+ 
+     TCanvas *c1 = new TCanvas("c1","c1", 800, 600);
+     hScintiEdep->Draw();
+diff --git a/include/AnalysisOutput.hh b/include/AnalysisOutput.hh
+index f1fa8bc..1f7a590 100644
+--- a/include/AnalysisOutput.hh
++++ b/include/AnalysisOutput.hh
+@@ -3,63 +3,72 @@
+ 
+ #include "globals.hh"
+ 
+-class EventAction;
++#include <vector>
++
++struct ScintiEventData;
++struct PmtEventData;
++struct PmtChannelKey;
+ 
+ class AnalysisOutput {
+ public:
+     AnalysisOutput() = default;
+     ~AnalysisOutput() = default;
+ 
+-    void Book(EventAction* eventAction);
+-
+-    void FillScinti(
+-        G4double edep,
+-        G4double evis,
+-        G4double generatedPhotons,
+-        G4double firstHitTime,
+-        G4int hitCount
+-    );
++    void Book();
+ 
+-    void FillPMTPhotons(
+-        G4int pmt1Photons,
+-        G4int pmt2Photons
++    void FillChannelRow(
++        G4int runId,
++        G4int eventId,
++        const PmtChannelKey& channelKey,
++        const ScintiEventData& scintiData,
++        const PmtEventData& pmtData,
++        G4int sumArrivedPhotons,
++        G4int sumDetectedPhotons,
++        G4double arrivalEfficiency,
++        G4double detectionEfficiency,
++        G4double sumArrivalEfficiency,
++        G4double sumDetectionEfficiency
+     );
+ 
+-    void FillEventSummary(
+-        G4double scintiHitRadius,
+-        G4double pmt1Efficiency,
+-        G4double pmt2Efficiency
+-    );
++private:
++    G4int fNtupleId = -1;
+ 
+-    void AddRow();
++    G4int fRunId = -1;
++    G4int fEventId = -1;
++    G4int fDetectorCopyNo = -1;
++    G4int fPmtCopyNo = -1;
++    G4int fIsDetectorRepresentative = -1;
+ 
+-private:
+-    //以下は物理量に紐づくID(物理量の値そのものではないので注意)
+     G4int fScintiEdep = -1;
+     G4int fScintiEvis = -1;
+-    G4int fScintiPhotons = -1;
+-    G4int fScintiInteractionCount = -1;
+-    G4int fScintiHitTime = -1;
+-    G4int fScintiHitPosGlobal = -1;
+-    G4int fScintiHitPosLocal = -1;
+-    G4int fScintiHitPosRadius = -1;
++    G4int fGeneratedPhotons = -1;
++    G4int fNeutronInteractionCount = -1;
++    G4int fFirstHitTime = -1;
++
++    G4int fFirstHitGlobalX = -1;
++    G4int fFirstHitGlobalY = -1;
++    G4int fFirstHitGlobalZ = -1;
++
++    G4int fFirstHitLocalX = -1;
++    G4int fFirstHitLocalY = -1;
++    G4int fFirstHitLocalZ = -1;
++    G4int fFirstHitRadius = -1;
+ 
+-    G4int fPMTSumPhotons = -1;
+-    G4int fPMTSumEfficiency = -1;
+-    G4int fPMT1Photons = -1;
+-    G4int fPMT1Efficiency = -1;
+-    G4int fPMT2Photons = -1;
+-    G4int fPMT2Efficiency = -1;
++    G4int fArrivedPhotons = -1;
++    G4int fDetectedPhotons = -1;
++    G4int fArrivalEfficiency = -1;
++    G4int fDetectionEfficiency = -1;
+ 
+-    G4int fPMT1HitTimes = -1;
+-    G4int fPMT1HitPosX = -1;
+-    G4int fPMT1HitPosY = -1;
+-    G4int fPMT1HitPosZ = -1;
++    G4int fSumArrivedPhotons = -1;
++    G4int fSumDetectedPhotons = -1;
++    G4int fSumArrivalEfficiency = -1;
++    G4int fSumDetectionEfficiency = -1;
+ 
+-    G4int fPMT2HitTimes = -1;
+-    G4int fPMT2HitPosX = -1;
+-    G4int fPMT2HitPosY = -1;
+-    G4int fPMT2HitPosZ = -1;
++    // vector branchが参照する実体
++    std::vector<G4double> fHitTimes;
++    std::vector<G4double> fHitPosX;
++    std::vector<G4double> fHitPosY;
++    std::vector<G4double> fHitPosZ;
+ };
+ 
+ #endif
+\ No newline at end of file
+diff --git a/include/CathodeSD.hh b/include/CathodeSD.hh
+index 2ae643e..b29a5ac 100644
+--- a/include/CathodeSD.hh
++++ b/include/CathodeSD.hh
+@@ -1,27 +1,45 @@
+ #ifndef CATHODESD_HH
+ #define CATHODESD_HH
+ 
++#include "DetectorChannelKey.hh"
++
+ #include "G4VSensitiveDetector.hh"
++#include "G4ThreeVector.hh"
++
++#include <map>
++#include <set>
++#include <vector>
++
++struct PmtEventData {
++    G4int arrivedPhotons = 0;
++    G4int detectedPhotons = 0;
++
++    std::vector<G4double> hitTimes;
++    std::vector<G4ThreeVector> hitPositions;
++};
+ 
+-class G4OpBoundaryProcess;
+ class G4Track;
+ 
+ class CathodeSD : public G4VSensitiveDetector {
+ public:
++     using PmtDataMap = std::map<PmtChannelKey,PmtEventData>;
++
+     CathodeSD(G4String name);
+     ~CathodeSD() override = default;
+ 
+     void Initialize(G4HCofThisEvent* hitCollection) override;
+-    G4bool ProcessHits(G4Step* aStep, G4TouchableHistory* ROhist) override;
++    G4bool ProcessHits(G4Step* aStep, G4TouchableHistory* ROhist) override; //毎回stepごとに呼ばれる
++    G4bool ProcessBoundaryHit(const G4Step* step);
+     void EndOfEvent(G4HCofThisEvent* hitCollection) override;
+-    G4double GetArrivedPhotons(G4int pmtIndex) const { return fPhotonArrivedCount[pmtIndex]; }
+-    G4double GetDetectedPhotons(G4int pmtIndex) const { return fPhotonDetectedCount[pmtIndex];}
++
++    const PmtDataMap& GetPmtData() const {return fPmtData;}
++    const PmtEventData* FindPmtData(const PmtChannelKey& channelKey) const;
++
++    void RegisterChannel(const PmtChannelKey& channelKey);
+ 
+ private:
+-    G4int fPhotonArrivedCount[2];
+-    G4int fPhotonDetectedCount[2];
+-    //ベクトル要素についてはEventActionの管轄
++    std::set<PmtChannelKey> fRegisteredChannels;
++    PmtDataMap fPmtData;
+ 
+-    G4OpBoundaryProcess* fBoundary = nullptr;
+ };
+ #endif
+\ No newline at end of file
+diff --git a/include/EventAction.hh b/include/EventAction.hh
+index 76a367f..e5d1165 100644
+--- a/include/EventAction.hh
++++ b/include/EventAction.hh
+@@ -15,44 +15,11 @@ public:
+     void BeginOfEventAction(const G4Event* event) override;
+     void EndOfEventAction(const G4Event* event) override;
+ 
+-    // CathodeSD から時刻を投げ込むための窓口
+-    void AddHitTime(G4int id, G4double time) { fHitTimeList[id].push_back(time); }
+-    void AddHitPos(G4int id, G4double x, G4double y, G4double z) { 
+-        fHitPosXList[id].push_back(x);
+-        fHitPosYList[id].push_back(y);
+-        fHitPosZList[id].push_back(z);
++    void SetAnalysisOutput(AnalysisOutput* analysisOutput) {
++        fAnalysisOutput = analysisOutput;
+     }
+ 
+-    std::vector<G4double>& GetHitTimeListRef(G4int id) { return fHitTimeList[id]; }
+-    std::vector<G4double>& GetHitPosXListRef(G4int id) { return fHitPosXList[id]; }
+-    std::vector<G4double>& GetHitPosYListRef(G4int id) { return fHitPosYList[id]; }
+-    std::vector<G4double>& GetHitPosZListRef(G4int id) { return fHitPosZList[id]; }
+-
+-    std::vector<G4double>& GetScintiPosGlobalRef() { return fScintiPosGlobal; }
+-    std::vector<G4double>& GetScintiPosLocalRef()  { return fScintiPosLocal; }
+-
+-    G4double GetEfficiency(G4int id) const {
+-        if (id == 0) return fEff[0];
+-        else if (id == 1) return fEff[1];
+-        else return 0.0;
+-    }
+-
+-    void SetAnalysisOutput(AnalysisOutput* analysisOutput) { fAnalysisOutput = analysisOutput; }
+-    AnalysisOutput* GetAnalysisOutput() const { return fAnalysisOutput; }
+-
+-
+ private:
+-    std::vector<G4double> fHitTimeList[2];
+-    std::vector<G4double> fHitPosXList[2];
+-    std::vector<G4double> fHitPosYList[2];
+-    std::vector<G4double> fHitPosZList[2];
+-
+-    std::vector<G4double> fScintiPosGlobal;
+-    std::vector<G4double> fScintiPosLocal;
+-    G4double fRadius;
+-
+-    G4double fEff[2] = {0.0, 0.0};
+-
+     AnalysisOutput* fAnalysisOutput = nullptr;
+   
+ };
+diff --git a/include/LogVol/LigLogVol.hh b/include/LogVol/LigLogVol.hh
+index 82e2e1a..2971b3a 100644
+--- a/include/LogVol/LigLogVol.hh
++++ b/include/LogVol/LigLogVol.hh
+@@ -19,6 +19,8 @@ class LigLogVol
+     G4VSolid* Solid;
+     G4LogicalVolume* LogVol;
+     G4LogicalVolume* LogVol0; // Scintillator (SD登録用)
++    G4LogicalVolume* LogVol1; // Cathode (SD登録用)
++    G4LogicalVolume* LogVol2; // PMT (SD登録用)
+ 
+   public:
+      LigLogVol(G4String Name="Lig", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
+@@ -26,7 +28,9 @@ class LigLogVol
+ 
+     G4VSolid* GetSolid()         { return Solid;  }
+     G4LogicalVolume* GetLogicalVolume() { return LogVol; }
+-    G4LogicalVolume* GetScintiVolume()  { return LogVol0; } // SD登録用のゲッター
++    G4LogicalVolume* GetScintiVolume()  { return LogVol0; } 
++    G4LogicalVolume* GetCathodeVolume() { return LogVol1; } 
++    G4LogicalVolume* GetPMTVolume() {return LogVol2; }
+ };
+ 
+ //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
+diff --git a/include/ScintiSD.hh b/include/ScintiSD.hh
+index 60b4d64..6e7caf5 100644
+--- a/include/ScintiSD.hh
++++ b/include/ScintiSD.hh
+@@ -1,12 +1,40 @@
+ #ifndef SCINTISD_HH
+ #define SCINTISD_HH
+ 
++#include "DetectorChannelKey.hh"
++
+ #include "G4VSensitiveDetector.hh"
+ #include "G4ThreeVector.hh"
+ 
++#include <map>
++
++struct ScintiEventData{
++    G4double totalEdep = 0.0;
++    G4double totalEvis = 0.0;
++    G4double generatedPhotons = 0.0;
++
++    G4double firstHitTime = -1.0;
++
++    G4ThreeVector firstHitPosGlobal{
++        -99999.0,
++        -99999.0,
++        -99999.0
++    };
++
++    G4ThreeVector firstHitPosLocal{
++        -99999.0,
++        -99999.0,
++        -99999.0
++    };
++
++    G4int neutronInteractionCount = 0;
++};
++
+ 
+ class ScintiSD : public G4VSensitiveDetector {
+ public:
++    using ScintiDataMap = std::map<DetectorKey,ScintiEventData>;
++
+     ScintiSD(G4String name);
+     ~ScintiSD() override = default; //defaultとして中身も定義済み
+ 
+@@ -14,19 +42,12 @@ public:
+     G4bool ProcessHits(G4Step* aStep, G4TouchableHistory* ROhist) override;
+     void EndOfEvent(G4HCofThisEvent* hitCollection) override;
+ 
+-    G4double GetGeneratedPhotons() const { return fGeneratedPhotons; };
+-
+-    G4ThreeVector GetFirstHitPosGlobal() const { return fFirstHitPosGlobal; }
+-    G4ThreeVector GetFirstHitPosLocal()  const { return fFirstHitPosLocal; }
++    const ScintiDataMap& GetScintiData() const {return fScintiData;}
+ 
++    const ScintiEventData* FindScintiData(const DetectorKey& detectorKey) const;
+ private:
+-    G4double fTotalEdep;
+-    G4double fTotalEvis;
+-    G4double fGeneratedPhotons;
+-    G4double fFirstHitTime;
+-    G4ThreeVector fFirstHitPosGlobal;
+-    G4ThreeVector fFirstHitPosLocal;
+-    G4int fNeutronInteractionCount;
++    ScintiDataMap fScintiData;
++
+     
+ };
+ #endif
+\ No newline at end of file
+diff --git a/include/SteppingAction.hh b/include/SteppingAction.hh
+index 8116782..6eb6d42 100644
+--- a/include/SteppingAction.hh
++++ b/include/SteppingAction.hh
+@@ -5,6 +5,8 @@
+ #include "G4Step.hh"
+ #include "G4Track.hh"
+ 
++class G4OpBoundaryProcess;
++
+ class SteppingAction : public G4UserSteppingAction {
+ public:
+     SteppingAction();
+@@ -12,6 +14,10 @@ public:
+ 
+     // ステップが発生するたびにGeant4カーネルから自動で呼ばれる関数
+     void UserSteppingAction(const G4Step* step) override;
++
++private:
++    G4OpBoundaryProcess* fBoundary = nullptr;
++    
+ };
+ 
+ #endif
+\ No newline at end of file
+diff --git a/macros/run.mac b/macros/run.mac
+index 1294dd0..6754d8a 100644
+--- a/macros/run.mac
++++ b/macros/run.mac
+@@ -1,5 +1,5 @@
+ # run.mac の内容
+ /run/initialize
+ /mygen/sourceType neutron
+-/run/printProgress 1000000
+-/run/beamOn 20000
++/run/printProgress 100000
++/run/beamOn 10000000
+diff --git a/src/AnalysisOutput.cc b/src/AnalysisOutput.cc
+index d1fbbc4..cf9efba 100644
+--- a/src/AnalysisOutput.cc
++++ b/src/AnalysisOutput.cc
+@@ -1,131 +1,385 @@
+ #include "AnalysisOutput.hh"
+-#include "EventAction.hh"
++#include "ScintiSD.hh"
++#include "CathodeSD.hh"
++#include "DetectorChannelKey.hh"
++
+ #include "G4AnalysisManager.hh"
+ 
+-void AnalysisOutput::Book(EventAction* eventAction)
++#include <cmath>
++
++void AnalysisOutput::Book()
+ {
+-    auto analysisManager = G4AnalysisManager::Instance();
++    auto* analysisManager = G4AnalysisManager::Instance();
+ 
+     analysisManager->SetNtupleMerging(true);
+-    analysisManager->CreateNtuple("tree", "tree");
++
++    fNtupleId =
++        analysisManager->CreateNtuple(
++            "tree",
++            "Detector and PMT channel data"
++        );
++
++    fRunId =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "RunID"
++        );
++
++    fEventId =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "EventID"
++        );
++
++    fDetectorCopyNo =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "DetectorCopyNo"
++        );
++
++    fPmtCopyNo =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "PmtCopyNo"
++        );
++
++    fIsDetectorRepresentative =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "IsDetectorRepresentative"
++        );
+ 
+     fScintiEdep =
+-        analysisManager->CreateNtupleDColumn("Scinti_Edep");
++        analysisManager->CreateNtupleDColumn(
++            fNtupleId,
++            "ScintiEdep"
++        );
++
+     fScintiEvis =
+-        analysisManager->CreateNtupleDColumn("Scinti_Evis");
+-    fScintiPhotons =
+-        analysisManager->CreateNtupleDColumn("Scinti_Photons");
+-    fScintiInteractionCount =
+-        analysisManager->CreateNtupleIColumn("Scinti_InteractionCount");
++        analysisManager->CreateNtupleDColumn(
++            fNtupleId,
++            "ScintiEvis"
++        );
+ 
+-    fScintiHitTime =
+-        analysisManager->CreateNtupleDColumn("Scinti_HitTime");
++    fGeneratedPhotons =
++        analysisManager->CreateNtupleDColumn(
++            fNtupleId,
++            "GeneratedPhotons"
++        );
++
++    fNeutronInteractionCount =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "NeutronInteractionCount"
++        );
+ 
+-    fScintiHitPosGlobal =
++    fFirstHitTime =
+         analysisManager->CreateNtupleDColumn(
+-            "Scinti_HitPos_Global",
+-            eventAction->GetScintiPosGlobalRef()
++            fNtupleId,
++            "FirstHitTime"
+         );
+-    fScintiHitPosLocal =
++
++    fFirstHitGlobalX =
+         analysisManager->CreateNtupleDColumn(
+-            "Scinti_HitPos_Local",
+-            eventAction->GetScintiPosLocalRef()
+-        );
+-    fScintiHitPosRadius =
+-        analysisManager->CreateNtupleDColumn("Scinti_HitPos_Radius");
+-
+-    fPMTSumPhotons =
+-        analysisManager->CreateNtupleIColumn("PMT_SUM_Photons");
+-    fPMTSumEfficiency =
+-        analysisManager->CreateNtupleDColumn("PMT_SUM_Efficiency");
+-    fPMT1Photons =
+-        analysisManager->CreateNtupleIColumn("PMT1_Photons");
+-    fPMT1Efficiency =
+-        analysisManager->CreateNtupleDColumn("PMT1_Efficiency");
+-    fPMT2Photons =
+-        analysisManager->CreateNtupleIColumn("PMT2_Photons");
+-    fPMT2Efficiency =
+-        analysisManager->CreateNtupleDColumn("PMT2_Efficiency");
+-
+-    fPMT1HitTimes =
++            fNtupleId,
++            "FirstHitGlobalX"
++        );
++
++    fFirstHitGlobalY =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT1_HitTimes",
+-            eventAction->GetHitTimeListRef(0)
++            fNtupleId,
++            "FirstHitGlobalY"
+         );
+-    fPMT1HitPosX =
++
++    fFirstHitGlobalZ =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT1_HitPos_X",
+-            eventAction->GetHitPosXListRef(0)
++            fNtupleId,
++            "FirstHitGlobalZ"
+         );
+-    fPMT1HitPosY =
++
++    fFirstHitLocalX =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT1_HitPos_Y",
+-            eventAction->GetHitPosYListRef(0)
++            fNtupleId,
++            "FirstHitLocalX"
+         );
+-    fPMT1HitPosZ =
++
++    fFirstHitLocalY =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT1_HitPos_Z",
+-            eventAction->GetHitPosZListRef(0)
++            fNtupleId,
++            "FirstHitLocalY"
+         );
+ 
+-    fPMT2HitTimes =
++    fFirstHitLocalZ =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT2_HitTimes",
+-            eventAction->GetHitTimeListRef(1)
++            fNtupleId,
++            "FirstHitLocalZ"
+         );
+-    fPMT2HitPosX =
++
++    fFirstHitRadius =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT2_HitPos_X",
+-            eventAction->GetHitPosXListRef(1)
++            fNtupleId,
++            "FirstHitRadius"
+         );
+-    fPMT2HitPosY =
++
++    fArrivedPhotons =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "ArrivedPhotons"
++        );
++
++    fDetectedPhotons =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "DetectedPhotons"
++        );
++
++    fArrivalEfficiency =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT2_HitPos_Y",
+-            eventAction->GetHitPosYListRef(1)
++            fNtupleId,
++            "ArrivalEfficiency"
+         );
+-    fPMT2HitPosZ =
++
++    fDetectionEfficiency =
+         analysisManager->CreateNtupleDColumn(
+-            "PMT2_HitPos_Z",
+-            eventAction->GetHitPosZListRef(1)
++            fNtupleId,
++            "DetectionEfficiency"
+         );
+ 
+-    analysisManager->FinishNtuple(0);
+-}
++    fSumArrivedPhotons =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "PmtSumArrivedPhotons"
++        );
+ 
+-void AnalysisOutput::FillScinti(G4double edep, G4double evis, G4double generatedPhotons, G4double firstHitTime, G4int neutronInteractionCount)
+-{
+-    auto analysisManager = G4AnalysisManager::Instance();
++    fSumDetectedPhotons =
++        analysisManager->CreateNtupleIColumn(
++            fNtupleId,
++            "PmtSumDetectedPhotons"
++        );
+ 
+-    analysisManager->FillNtupleDColumn(fScintiEdep, edep);
+-    analysisManager->FillNtupleDColumn(fScintiEvis, evis);
+-    analysisManager->FillNtupleDColumn(fScintiPhotons, generatedPhotons);
+-    analysisManager->FillNtupleDColumn(fScintiHitTime, firstHitTime);
+-    analysisManager->FillNtupleIColumn(fScintiInteractionCount, neutronInteractionCount);
+-}
++    fSumArrivalEfficiency =
++        analysisManager->CreateNtupleDColumn(
++            fNtupleId,
++            "PmtSumArrivalEfficiency"
++        );
+ 
+-void AnalysisOutput::FillPMTPhotons(G4int pmt1Photons, G4int pmt2Photons)
+-{
+-    auto analysisManager = G4AnalysisManager::Instance();
++    fSumDetectionEfficiency =
++        analysisManager->CreateNtupleDColumn(
++            fNtupleId,
++            "PmtSumDetectionEfficiency"
++        );
+ 
+-    analysisManager->FillNtupleIColumn(fPMTSumPhotons, pmt1Photons + pmt2Photons);
++    analysisManager->CreateNtupleDColumn(
++        fNtupleId,
++        "HitTimes",
++        fHitTimes
++    );
+ 
+-    analysisManager->FillNtupleIColumn(fPMT1Photons, pmt1Photons);
+-    analysisManager->FillNtupleIColumn(fPMT2Photons, pmt2Photons);
+-}
++    analysisManager->CreateNtupleDColumn(
++        fNtupleId,
++        "HitPosX",
++        fHitPosX
++    );
+ 
+-void AnalysisOutput::FillEventSummary(G4double scintiHitRadius, G4double pmt1Efficiency, G4double pmt2Efficiency)
+-{
+-    auto analysisManager = G4AnalysisManager::Instance();
++    analysisManager->CreateNtupleDColumn(
++        fNtupleId,
++        "HitPosY",
++        fHitPosY
++    );
+ 
+-    analysisManager->FillNtupleDColumn(fScintiHitPosRadius, scintiHitRadius);
++    analysisManager->CreateNtupleDColumn(
++        fNtupleId,
++        "HitPosZ",
++        fHitPosZ
++    );
+ 
+-    analysisManager->FillNtupleDColumn(fPMTSumEfficiency, (pmt1Efficiency + pmt2Efficiency));
+-    analysisManager->FillNtupleDColumn(fPMT1Efficiency, pmt1Efficiency);
+-    analysisManager->FillNtupleDColumn(fPMT2Efficiency, pmt2Efficiency);
++    analysisManager->FinishNtuple(
++        fNtupleId
++    );
+ }
+ 
+-void AnalysisOutput::AddRow()
++void AnalysisOutput::FillChannelRow(
++    G4int runId,
++    G4int eventId,
++    const PmtChannelKey& channelKey,
++    const ScintiEventData& scintiData,
++    const PmtEventData& pmtData,
++    G4int sumArrivedPhotons,
++    G4int sumDetectedPhotons,
++    G4double arrivalEfficiency,
++    G4double detectionEfficiency,
++    G4double sumArrivalEfficiency,
++    G4double sumDetectionEfficiency
++)
+ {
+-    auto analysisManager = G4AnalysisManager::Instance();
+-    analysisManager->AddNtupleRow(0);
++    auto* analysisManager =
++        G4AnalysisManager::Instance();
++
++    // vector branch用バッファ
++    fHitTimes = pmtData.hitTimes;
++
++    fHitPosX.clear();
++    fHitPosY.clear();
++    fHitPosZ.clear();
++
++    fHitPosX.reserve(
++        pmtData.hitPositions.size()
++    );
++    fHitPosY.reserve(
++        pmtData.hitPositions.size()
++    );
++    fHitPosZ.reserve(
++        pmtData.hitPositions.size()
++    );
++
++    for (const auto& position
++         : pmtData.hitPositions) {
++        fHitPosX.push_back(position.x());
++        fHitPosY.push_back(position.y());
++        fHitPosZ.push_back(position.z());
++    }
++
++    G4double firstHitRadius = -99999.0;
++
++    if (scintiData.neutronInteractionCount > 0) {
++        firstHitRadius = std::sqrt(
++            scintiData.firstHitPosLocal.x()
++                * scintiData.firstHitPosLocal.x()
++            + scintiData.firstHitPosLocal.y()
++                * scintiData.firstHitPosLocal.y()
++        );
++    }
++
++    const G4int isRepresentative =
++        channelKey.pmtCopyNo == 0
++        ? 1
++        : 0;
++
++    auto fillI =
++        [&](G4int columnId, G4int value) {
++            analysisManager->FillNtupleIColumn(
++                fNtupleId,
++                columnId,
++                value
++            );
++        };
++
++    auto fillD =
++        [&](G4int columnId, G4double value) {
++            analysisManager->FillNtupleDColumn(
++                fNtupleId,
++                columnId,
++                value
++            );
++        };
++
++    fillI(fRunId, runId);
++    fillI(fEventId, eventId);
++
++    fillI(
++        fDetectorCopyNo,
++        channelKey.detector.detectorCopyNo
++    );
++
++    fillI(
++        fPmtCopyNo,
++        channelKey.pmtCopyNo
++    );
++
++    fillI(
++        fIsDetectorRepresentative,
++        isRepresentative
++    );
++
++    fillD(fScintiEdep, scintiData.totalEdep);
++    fillD(fScintiEvis, scintiData.totalEvis);
++    fillD(
++        fGeneratedPhotons,
++        scintiData.generatedPhotons
++    );
++
++    fillI(
++        fNeutronInteractionCount,
++        scintiData.neutronInteractionCount
++    );
++
++    fillD(
++        fFirstHitTime,
++        scintiData.firstHitTime
++    );
++
++    fillD(
++        fFirstHitGlobalX,
++        scintiData.firstHitPosGlobal.x()
++    );
++    fillD(
++        fFirstHitGlobalY,
++        scintiData.firstHitPosGlobal.y()
++    );
++    fillD(
++        fFirstHitGlobalZ,
++        scintiData.firstHitPosGlobal.z()
++    );
++
++    fillD(
++        fFirstHitLocalX,
++        scintiData.firstHitPosLocal.x()
++    );
++    fillD(
++        fFirstHitLocalY,
++        scintiData.firstHitPosLocal.y()
++    );
++    fillD(
++        fFirstHitLocalZ,
++        scintiData.firstHitPosLocal.z()
++    );
++
++    fillD(
++        fFirstHitRadius,
++        firstHitRadius
++    );
++
++    fillI(
++        fArrivedPhotons,
++        pmtData.arrivedPhotons
++    );
++
++    fillI(
++        fDetectedPhotons,
++        pmtData.detectedPhotons
++    );
++
++    fillD(
++        fArrivalEfficiency,
++        arrivalEfficiency
++    );
++
++    fillD(
++        fDetectionEfficiency,
++        detectionEfficiency
++    );
++
++    fillI(
++        fSumArrivedPhotons,
++        sumArrivedPhotons
++    );
++
++    fillI(
++        fSumDetectedPhotons,
++        sumDetectedPhotons
++    );
++
++    fillD(
++        fSumArrivalEfficiency,
++        sumArrivalEfficiency
++    );
++
++    fillD(
++        fSumDetectionEfficiency,
++        sumDetectionEfficiency
++    );
++
++    analysisManager->AddNtupleRow(
++        fNtupleId
++    );
+ }
+\ No newline at end of file
+diff --git a/src/CathodeSD.cc b/src/CathodeSD.cc
+index 8112c8c..db0b8fd 100644
+--- a/src/CathodeSD.cc
++++ b/src/CathodeSD.cc
+@@ -1,79 +1,119 @@
+-#include "G4OpticalPhoton.hh"
+-#include "G4EventManager.hh"
+-#include "G4OpBoundaryProcess.hh"
+-
+-
+-
+ #include "CathodeSD.hh"
+-#include "EventAction.hh"
+-#include "AnalysisOutput.hh"
+-
+-
+ 
++namespace {
++    constexpr G4int kPmtDepth = 1;
++    constexpr G4int kDetectorDepth = 2;
++}
+ 
+ CathodeSD::CathodeSD(G4String name)
+- : G4VSensitiveDetector(name),
+-   fPhotonArrivedCount{0, 0},
+-   fPhotonDetectedCount{0, 0}
++ : G4VSensitiveDetector(name)
+ {
+ }
+ 
+ void CathodeSD::Initialize(G4HCofThisEvent*) {
+-    fPhotonArrivedCount[0] = 0;
+-    fPhotonArrivedCount[1] = 0;
+-    fPhotonDetectedCount[0] = 0;
+-    fPhotonDetectedCount[1] = 0;
++    fPmtData.clear();
++
++    for (const auto& channelKey : fRegisteredChannels) {
++        fPmtData.emplace(channelKey, PmtEventData{});
++    }
+ }
+ 
+ 
+ G4bool CathodeSD::ProcessHits(G4Step* aStep, G4TouchableHistory*) {
+ 
+-    //G4cout << "CathodeSD::ProcessHits" << G4endl;
++   return false;   
++
++}
++
++G4bool CathodeSD::ProcessBoundaryHit(const G4Step* aStep){
+ 
+-    // 光学光子以外がカソードに迷い込んだら無視
+-    if (aStep->GetTrack()->GetDefinition() != G4OpticalPhoton::OpticalPhotonDefinition()) {
++    if(aStep == nullptr){
+         return false;
+     }
+ 
+-    //G4cout << "good" << G4endl;
++    const auto* postPoint = aStep->GetPostStepPoint();
+ 
+-    // 「ステップのゴール地点がボリュームの境界」であり、かつ「隣のパーツ名が Cathode」であるか？
+-    if (aStep->GetPostStepPoint()->GetStepStatus() == fGeomBoundary) {
+-        auto nextVol = aStep->GetPostStepPoint()->GetPhysicalVolume();
+-        if (nextVol && nextVol->GetName() == "Cathode") {
++    //steppingActionでCathodeであることは判定済み
++    /*
++    auto* nextVol = postPoint->GetPhysicalVolume();
+ 
+-            G4int copyNo = aStep->GetPreStepPoint()->GetTouchableHandle()->GetCopyNumber();
++    //次に侵入するのがCathodeか判定
++    if (nextVol == nullptr || nextVol->GetName() != "Cathode"){
++        return false;
++    }
++    */
++
++    const auto* touchable = postPoint->GetTouchable();
++
++    if (touchable == nullptr){
++        return false;
++    }
+ 
+-            // copyNoが1 or 2　なので、0 or 1に変換する
+-            G4int pmtIndex = copyNo - 1; 
++    //GetHistoryDepthは参照可能な最大Depth番号を返す　→ 祖父である検出器が存在するかどうかを確認している
++    if (touchable->GetHistoryDepth() < kDetectorDepth){
++        return false;
++    }
+ 
+-            if (pmtIndex < 0 || pmtIndex > 1) return false; // copyNoが0か1以外なら無視
++    //検出器とpmtのcopyNoを取得
++    const G4int pmtCopyNo = touchable->GetCopyNumber(kPmtDepth);
++    const G4int detectorCopyNo = touchable->GetCopyNumber(kDetectorDepth);
+ 
+-            fPhotonArrivedCount[pmtIndex]++; 
++    if (detectorCopyNo < 0){
++        return false;
++    }
+ 
+-            auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
+-            eventAction->AddHitTime(pmtIndex, aStep->GetPostStepPoint()->GetGlobalTime());
++    if (pmtCopyNo < 0){
++        return false;
++    }
+ 
+-            G4ThreeVector pos = aStep->GetPostStepPoint()->GetPosition();
+-            eventAction->AddHitPos(pmtIndex, pos.x(), pos.y(), pos.z());
++    const DetectorKey detectorKey{detectorCopyNo};
++    const PmtChannelKey channelKey{detectorKey,pmtCopyNo};
+ 
+-            aStep->GetTrack()->SetTrackStatus(fStopAndKill); // 光子を停止させる
++    //fPmtDataからchannelKeyに対応するPmtEventDataを取得し、dataと結びつける
++    const auto iter = fPmtData.find(channelKey);
+ 
+-        }
++    if (iter == fPmtData.end()) {
++        return false;
+     }
+-    
++
++    PmtEventData& data = iter->second;
++
++    ++data.arrivedPhotons;
++    ++data.detectedPhotons;
++
++    data.hitTimes.push_back(postPoint->GetGlobalTime());
++
++    data.hitPositions.push_back(postPoint->GetPosition());
++
++    //光子は全て吸収されるものとする
++    //aStep->GetTrack()->SetTrackStatus(fStopAndKill);
++
+     return true;
+ 
+ }
+ 
+-void CathodeSD::EndOfEvent(G4HCofThisEvent*) {
+-    
+-    auto eventAction = static_cast<EventAction*>(G4EventManager::GetEventManager()->GetUserEventAction());
+ 
+-    if(!eventAction) return;
++const PmtEventData* CathodeSD::FindPmtData(const PmtChannelKey& channelKey) const
++{
++    const auto iter =
++        fPmtData.find(channelKey);
+ 
+-    auto output = eventAction->GetAnalysisOutput();
+-    if(!output) return;
++    if (iter == fPmtData.end()) {
++        return nullptr;
++    }
++
++    return &(iter->second);
++}
++
++void CathodeSD::RegisterChannel(const PmtChannelKey& channelKey)
++{
++    if (channelKey.detector.detectorCopyNo < 0 || channelKey.pmtCopyNo < 0) {
++        return;
++    }
++
++    fRegisteredChannels.insert(channelKey);
++}
+ 
+-    output->FillPMTPhotons(fPhotonArrivedCount[0], fPhotonArrivedCount[1]);
++
++void CathodeSD::EndOfEvent(G4HCofThisEvent*) {
+ }
+\ No newline at end of file
+diff --git a/src/DetectorConstruction.cc b/src/DetectorConstruction.cc
+index 0d0b3eb..6d55379 100644
+--- a/src/DetectorConstruction.cc
++++ b/src/DetectorConstruction.cc
+@@ -55,8 +55,8 @@ std::map<G4String, EnableAndID> Mode = {
+ //テスト用
+ std::map<G4String, EnableAndID> Mode = {
+ //  NAME         ENABLE   ID0   nObj
+-  {"LigGlass",  { false,    1,    1 } },
+-  {"UROKO",     { true,   10,    1 } },
++  {"LigGlass",  { true,    1,    1 } },
++  {"UROKO",     { false,   10,    1 } },
+   {"HILE",      { false,   20,    1 } },
+   {"HPGe",      { false,   30,    7 } },
+   {"BetaPlastic", { false,   40,    1 } },
+@@ -119,11 +119,13 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
+     G4LogicalVolume* Lig_LogVol = fLig->GetLogicalVolume();
+ 
+     G4double front_Lig = -132.0 * mm;
+-    G4double total_length_Lig = (28.5 + 246.0) * mm;
++    G4double length_PMT = 245.0 * mm;
++    G4double length_emptyspace = 28.5 * mm;
++    G4double total_length_Lig = (length_emptyspace + length_PMT) * mm;
+     
+     G4RotationMatrix rot_Lig;
+     rot_Lig.rotateX(-90.0 * deg);
+-    G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0), 0.0);
++    G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0) + length_emptyspace, 0.0);
+     new G4PVPlacement(G4Transform3D(rot_Lig, pos_Lig), objName+"_Phys", Lig_LogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
+   }
+ 
+@@ -172,7 +174,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
+     //ターゲット検出器間の距離は 1000 mm
+     //G4ThreeVector pos_UROKO[1] = { G4ThreeVector(1000*mm, 0, 0) };
+ 
+-    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1500.0*mm, 0, 0) };
++    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1000.0*mm, 0, 0) };
+ 
+     G4RotationMatrix rot_UROKO[1];
+     rot_UROKO[0].rotateY(90.0*deg);
+@@ -448,16 +450,22 @@ void DetectorConstruction::ConstructSDandField()
+ 
+ 
+   //注意：現状のコードでは各検出器を一台ずつテストすることしか想定していない
+-  
+   if( Mode["LigGlass"].Enable && fLig ) {
+-    //fLig->GetScintiVolume()->SetSensitiveDetector(sensDet);
++    fLig->GetScintiVolume()->SetSensitiveDetector(scintiSD);
++    fLig->GetCathodeVolume()->SetSensitiveDetector(cathodeSD); 
++    const DetectorKey detectorKey{Mode["LigGlass"].ID};
++    cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // LigGlassのCathodeは1つしかないので、PMT番号は0で固定
+   }
+   
+   if( Mode["UROKO"].Enable && fUROKO ) {
+     fUROKO->GetScintiVolume()->SetSensitiveDetector(scintiSD);
+-    //fUROKO->GetGuideVolume()->SetSensitiveDetector(cathodeSD);
+-    fUROKO->GetPMTVolume()->SetSensitiveDetector(cathodeSD);
+-    //fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
++    fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
++
++    for (G4int i = 0; i < Mode["UROKO"].nObj; ++i) {
++      const DetectorKey detectorKey{Mode["UROKO"].ID + i};
++      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
++      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 1}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
++    }
+   }
+ 
+   if( Mode["HILE"].Enable && fHile ) {
+diff --git a/src/EventAction.cc b/src/EventAction.cc
+index 28436d2..5dc0349 100644
+--- a/src/EventAction.cc
++++ b/src/EventAction.cc
+@@ -1,65 +1,102 @@
+ #include "EventAction.hh"
+-#include "G4AnalysisManager.hh"
+-#include "G4SDManager.hh"
+ #include "ScintiSD.hh"
+ #include "CathodeSD.hh"
+-
+ #include "AnalysisOutput.hh"
+ 
++#include "G4Event.hh"
++#include "G4Run.hh"
++#include "G4RunManager.hh"
++#include "G4SDManager.hh"
+ 
+-void EventAction::BeginOfEventAction(const G4Event*) {
+-    for (int i = 0; i < 2; i++) {
+-        fHitTimeList[i].clear();
+-        fHitPosXList[i].clear();
+-        fHitPosYList[i].clear();
+-        fHitPosZList[i].clear();
+-    }
++#include <map>
+ 
+-    fScintiPosGlobal.clear();
+-    fScintiPosLocal.clear();
+-    fRadius = -99999.0;
+-    fEff[0] = 0.0;
+-    fEff[1] = 0.0;
++namespace {
++    struct PmtTotals {
++        G4int sumArrivedPhotons = 0;
++        G4int sumDetectedPhotons = 0;
++    };
+ }
+ 
+-void EventAction::EndOfEventAction(const G4Event*) {
+-
+-    //Event毎にデータを確定させる
+-    auto analysisManager = G4AnalysisManager::Instance();
++void EventAction::BeginOfEventAction(const G4Event*) {
++   //初期化はSD自身が担当
++}
+ 
+-    auto sdManager = G4SDManager::GetSDMpointer();
++void EventAction::EndOfEventAction(const G4Event* event) {
+ 
+-    //efficiencyの計算
+-    auto scintiSD = static_cast<ScintiSD*>(sdManager->FindSensitiveDetector("ScintiSD"));
+-    auto cathodeSD = static_cast<CathodeSD*>(sdManager->FindSensitiveDetector("CathodeSD"));
++    if (event == nullptr || fAnalysisOutput == nullptr) {
++        return;
++    }
+ 
+-    if (scintiSD && cathodeSD) {
++    auto* sdManager = G4SDManager::GetSDMpointer();
+ 
+-        G4double generatedPhotons = scintiSD->GetGeneratedPhotons();
+-        G4double pmt1Photons = cathodeSD->GetArrivedPhotons(0);
+-        G4double pmt2Photons = cathodeSD->GetArrivedPhotons(1);
++    auto scintiSD = dynamic_cast<ScintiSD*>(sdManager->FindSensitiveDetector("ScintiSD"));
++    auto cathodeSD = dynamic_cast<CathodeSD*>(sdManager->FindSensitiveDetector("CathodeSD"));
+ 
+-        if (generatedPhotons > 0) {
+-            fEff[0] = pmt1Photons / generatedPhotons;
+-            fEff[1] = pmt2Photons / generatedPhotons;
+-        } else {
+-            fEff[0] = 0.0;
+-            fEff[1] = 0.0;
+-        }
++    if (scintiSD == nullptr || cathodeSD == nullptr) {
++        return;
++    }
+ 
+-        G4ThreeVector posG = scintiSD->GetFirstHitPosGlobal();
+-        fScintiPosGlobal = { posG.x(), posG.y(), posG.z() }; 
++    const G4int eventId = event->GetEventID();
++    G4int runId = -1;
+ 
+-        G4ThreeVector posL = scintiSD->GetFirstHitPosLocal();
+-        fScintiPosLocal  = { posL.x(), posL.y(), posL.z() };
++    const auto* currentRun = G4RunManager::GetRunManager()->GetCurrentRun();
+ 
+-        // 中心位置からの距離を算出（**重要** 検出器はz方向が奥行きになっている）
+-        fRadius = std::sqrt(posL.x() * posL.x() + posL.y() * posL.y());
++    if (currentRun != nullptr) {
++        runId = currentRun->GetRunID();
+     }
+ 
+-    if(fAnalysisOutput) {
+-        fAnalysisOutput->FillEventSummary(fRadius, fEff[0], fEff[1]);
+-        fAnalysisOutput->AddRow();
++    const auto& pmtDataMap = cathodeSD->GetPmtData();
++
++    // PMTごとの到達光子数と検出光子数の合計を計算
++    std::map<DetectorKey, PmtTotals> totalsByDetector;
++
++    for (const auto& [channelKey, pmtData] : pmtDataMap) {
++        auto& totals = totalsByDetector[channelKey.detector];
++        totals.sumArrivedPhotons += pmtData.arrivedPhotons;
++        totals.sumDetectedPhotons += pmtData.detectedPhotons;
+     }
+ 
++    // Scintiデータが存在しない場合に使う初期値？？？　
++    const ScintiEventData emptyScintiData;
++
++
++    //1 PMTchannelにつき１行出力する
++    for (const auto& [channelKey, pmtData] : pmtDataMap) {
++        
++        const ScintiEventData* foundScintiData = scintiSD->FindScintiData(channelKey.detector);
++
++        const ScintiEventData& scintiData = foundScintiData ? *foundScintiData : emptyScintiData;
++
++        const PmtTotals& totals = totalsByDetector.at(channelKey.detector);
++
++        G4double arrivalEfficiency = 0.0;
++        G4double detectionEfficiency = 0.0;
++        G4double sumArrivalEfficiency = 0.0;
++        G4double sumDetectionEfficiency = 0.0;
++
++        if (scintiData.generatedPhotons > 0) {
++            arrivalEfficiency = static_cast<G4double>(pmtData.arrivedPhotons) / scintiData.generatedPhotons;
++            detectionEfficiency = static_cast<G4double>(pmtData.detectedPhotons) / scintiData.generatedPhotons;
++
++            sumArrivalEfficiency = static_cast<G4double>(totals.sumArrivedPhotons) / scintiData.generatedPhotons;
++            sumDetectionEfficiency = static_cast<G4double>(totals.sumDetectedPhotons) / scintiData.generatedPhotons;
++
++        }
++
++        fAnalysisOutput->FillChannelRow(
++            runId,
++            eventId,
++            channelKey,
++            scintiData,
++            pmtData,
++            totals.sumArrivedPhotons,
++            totals.sumDetectedPhotons,
++            arrivalEfficiency,
++            detectionEfficiency,
++            sumArrivalEfficiency,
++            sumDetectionEfficiency
++        );
++
++
++    }
+ }
+\ No newline at end of file
+diff --git a/src/LogVol/LigLogVol.cc b/src/LogVol/LigLogVol.cc
+index 2812688..67580ea 100644
+--- a/src/LogVol/LigLogVol.cc
++++ b/src/LogVol/LigLogVol.cc
+@@ -1,5 +1,14 @@
+ #include "LogVol/LigLogVol.hh"
+ #include "Material/GS20Mat.hh"
++#include "Material/PMTGlassMat.hh"
++#include "Material/BC408Mat.hh"
++
++#include "Surface/UROKO/CathodeSurface.hh"
++#include "Surface/UROKO/DielectricSurface.hh"
++#include "Surface/UROKO/MirrorSurface.hh"
++#include "Surface/UROKO/DiffuseSurface.hh"
++#include "Surface/UROKO/BC620Surface.hh"
++#include "Surface/UROKO/TybekSurface.hh"
+ 
+ #include "G4Box.hh"
+ #include "G4Cons.hh"
+@@ -10,12 +19,12 @@
+ #include "G4SubtractionSolid.hh"
+ #include "G4ThreeVector.hh"
+ #include "G4Transform3D.hh"
+-
+ #include "G4SystemOfUnits.hh"
+-
+ #include "G4NistManager.hh"
+ #include "G4PVPlacement.hh"
+ #include "G4VisAttributes.hh"
++#include "G4LogicalBorderSurface.hh"
++#include "G4LogicalSkinSurface.hh"
+ 
+ using namespace CLHEP;
+ 
+@@ -109,17 +118,24 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
+ 
+   // これらを全て包み込む「親ボリューム（Mother Volume）」の作成
+   double offset = 28.5*mm; //磁気シールドの表面からシンチレータまでの距離
+-  double total_length = offset + thickness_Lig + cathode_T_Lig + PMT_L_Lig; // 28.5 + 246 mm
++  double total_length = offset + thickness_Lig + PMT_L_Lig; // 28.5 + 245 mm
+   double max_radius   = MagShield_W_Lig / 2.; // 最大半径(MagShield)
+   Solid = new G4Tubs(Name+"_Solid", 0, max_radius, total_length/2., 0, 2*pi);
+ 
+   ////////////////////////////////////////////////////////////////////
+   //// Material
+   GS20Mat* fGS20 = new GS20Mat();
+-  auto Mat  = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic"); // 親空間は真空
+-  auto Mat0 = fGS20->GetMaterial();
++  PMTGlassMat* fPMTGlass = new PMTGlassMat();
++  BC408Mat* fBC408 = new BC408Mat();
++
++  auto Mat  = G4NistManager::Instance()->FindOrBuildMaterial("G4_AIR"); // 親空間は空気（Scinti表面とShield先頭までの空間は空気で埋められているはず）
++  //auto Mat0 = fGS20->GetMaterial();
++
++  //テスト用
++  auto Mat0 = fBC408->GetMaterial();
++
+   auto Mat1 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Al");
+-  auto Mat2 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Pyrex_Glass");
++  auto Mat2 = fPMTGlass->GetMaterial();
+   auto Mat3 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Fe");
+ 
+ 
+@@ -129,8 +145,8 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
+   LogVol -> SetVisAttributes( new G4VisAttributes(TRUE,Color(ColID::White,0.0) )); // 親は見えないようにする
+     
+   LogVol0 = new G4LogicalVolume(tmp0, Mat0, Name+"_LogVol0", 0, 0, fStepLimit, false);
+-  G4LogicalVolume* LogVol1 = new G4LogicalVolume(tmp1, Mat1, Name+"_LogVol1", 0, 0, fStepLimit, false);
+-  G4LogicalVolume* LogVol2 = new G4LogicalVolume(tmp2, Mat2, Name+"_LogVol2", 0, 0, fStepLimit, false);
++  LogVol1 = new G4LogicalVolume(tmp1, Mat1, Name+"_LogVol1", 0, 0, fStepLimit, false);
++  LogVol2 = new G4LogicalVolume(tmp2, Mat2, Name+"_LogVol2", 0, 0, fStepLimit, false);
+   G4LogicalVolume* LogVol3 = new G4LogicalVolume(tmp3, Mat3, Name+"_LogVol3", 0, 0, fStepLimit, false);
+   
+   ////////////////////////////////////////////////////////////////////
+@@ -160,23 +176,48 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
+ 
+   ////////////////////////////////////////////////////////////////////
+   //// Physical Volume
+-  // 親ボリュームの中心(0,0,0)から見た、Z軸上の相対位置を計算して配置します。
++  // 親ボリュームの中心(0,0,0)から見た、Z軸上の相対位置を計算して配置
+   double z_magshield = total_length/2;
+   double z_scinti  = z_magshield - offset - thickness_Lig/2;
+-  double z_cathode = z_scinti - thickness_Lig/2. - cathode_T_Lig/2.;
+-  double z_pmt     = z_cathode - cathode_T_Lig/2. - PMT_L_Lig/2.;
++  double z_pmt     = z_scinti - thickness_Lig/2 - PMT_L_Lig/2;
++
++  //cathodeはPMTに対して配置する (Glassの厚みを1mmと仮定する)
++  double z_cathode = PMT_L_Lig/2 - 1.0*mm - cathode_T_Lig/2 ;
++
+ 
++  G4VPhysicalVolume* phys0 = new G4PVPlacement((Move(0,0,z_scinti)),  LogVol0, "Scinti",  LogVol, false, 0, checkOverlaps);
++  G4VPhysicalVolume* phys2  = new G4PVPlacement(Move(0,0,z_pmt),     LogVol2, "PMT",     LogVol, false, 0, checkOverlaps);
+ 
+-  new G4PVPlacement((Move(0,0,z_scinti)),  LogVol0, "Scinti",  LogVol, false, 0, checkOverlaps);
+-  new G4PVPlacement(Move(0,0,z_cathode), LogVol1, "Cathode", LogVol, false, 0, checkOverlaps);
+-  new G4PVPlacement(Move(0,0,z_pmt),     LogVol2, "PMT",     LogVol, false, 0, checkOverlaps);
++  //cathodeはPMTに対して配置する
++  G4VPhysicalVolume* phys1 = new G4PVPlacement(Move(0,0,z_cathode), LogVol1, "Cathode", LogVol2, false, 0, checkOverlaps); 
+ 
+-  // 磁気シールドをY軸周りに180度回転させて、先端が前、後端が後ろを向くように被せます
++  // 磁気シールドをY軸周りに180度回転させて、先端が前、後端が後ろを向くように被せる
+   G4RotationMatrix* rotMagShield = new G4RotationMatrix();
+   rotMagShield->rotateY(180.*deg);
+-  new G4PVPlacement(rotMagShield, G4ThreeVector(0,0,z_magshield), LogVol3, "MagShield", LogVol, false, 0, checkOverlaps);
++  G4VPhysicalVolume* phys3 =new G4PVPlacement(rotMagShield, G4ThreeVector(0,0,z_magshield), LogVol3, "MagShield", LogVol, false, 0, checkOverlaps);
+     
+   //if(logmode) G4cout << "== LigLogVol::LigLogVol(G4String)\n";
++
++  ////////////////////////////////////////////////////////////////////
++  //Optical Surface
++  //ひとまず鏡面反射だけとする
++
++  G4OpticalSurface* surfCathode = (new CathodeSurface())->GetSurface();
++  G4OpticalSurface* surfDiel = (new DielectricSurface())->GetSurface();
++  G4OpticalSurface* surfMirror = (new MirrorSurface())->GetSurface(); //鏡面反射
++  //G4OpticalSurface* surfDiffuse = (new DiffuseSurface())->GetSurface(); //乱反射
++  
++
++  //[SkinSurface] 全体コーティング
++  new G4LogicalSkinSurface("ScintiSkin", LogVol0, surfMirror);
++  new G4LogicalSkinSurface("CathodeSkin", LogVol1, surfCathode);
++
++  //[BorderSurface] 接合面の上書き
++  // Scinti ⇄ PMTガラス間の光も「グリス」で上書き（双方向）
++  new G4LogicalBorderSurface("ScintiToPMT", phys0, phys2, surfDiel);
++  new G4LogicalBorderSurface("PMTToScinti", phys2, phys0, surfDiel);
++
++  
+ }
+ 
+ LigLogVol::~LigLogVol() 
+diff --git a/src/LogVol/UROKOLogVol.cc b/src/LogVol/UROKOLogVol.cc
+index c33699b..0479d70 100644
+--- a/src/LogVol/UROKOLogVol.cc
++++ b/src/LogVol/UROKOLogVol.cc
+@@ -186,8 +186,8 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+ 
+   // PMT は並列に2つ配置
+   double z_pmt = z_Scinti + thickness_UROKO + guide_L_UROKO + guide_S_UROKO + (PMT_L_UROKO / 2.0);
+-  G4VPhysicalVolume* physPMT1 = new G4PVPlacement(Move(-PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT1", LogVol, false, 1, checkOverlaps);
+-  G4VPhysicalVolume* physPMT2 = new G4PVPlacement(Move( PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT2", LogVol, false, 2, checkOverlaps);
++  G4VPhysicalVolume* physPMT0 = new G4PVPlacement(Move(-PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT0", LogVol, false, 0, checkOverlaps);
++  G4VPhysicalVolume* physPMT1 = new G4PVPlacement(Move( PMT_C_UROKO / 2.0, 0, z_pmt), LogVol_PMT, "PMT1", LogVol, false, 1, checkOverlaps);
+ 
+   // Cathode は PMT の「内部」に配置 (※配置先が LogVol ではなく LogVol_PMT になるのがポイント)
+   double z_cathode = -(PMT_L_UROKO / 2.0) + 3.0 * (cathode_T_UROKO / 2.0);
+@@ -215,9 +215,9 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+   new G4LogicalSkinSurface("CathodeSkin", LogVol_Cathode, surfCathode);
+ 
+   //[BorderSurface] 接合面の上書き
+-  // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
+-  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
++  // ①【前面】シンチからバンパー へ進む光だけ、鏡面スキンを「乱反射」で上書き
++  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
++  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+   
+   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
+ 
+@@ -226,12 +226,12 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+   new G4LogicalBorderSurface("GuideToScinti", physGuide, physScinti, surfDiel);
+ 
+   // ③【出口】ライトガイド ⇄ PMTガラス間の光も「グリス」で上書き（双方向）
++  new G4LogicalBorderSurface("GuideToPMT0", physGuide, physPMT0, surfDiel);
++  new G4LogicalBorderSurface("PMT0ToGuide", physPMT0, physGuide, surfDiel);
++
+   new G4LogicalBorderSurface("GuideToPMT1", physGuide, physPMT1, surfDiel);
+   new G4LogicalBorderSurface("PMT1ToGuide", physPMT1, physGuide, surfDiel);
+ 
+-  new G4LogicalBorderSurface("GuideToPMT2", physGuide, physPMT2, surfDiel);
+-  new G4LogicalBorderSurface("PMT2ToGuide", physPMT2, physGuide, surfDiel);
+-
+ }
+ 
+ UROKOLogVol::~UROKOLogVol() 
+diff --git a/src/Material/GS20Mat.cc b/src/Material/GS20Mat.cc
+index 26217b5..69c5e51 100644
+--- a/src/Material/GS20Mat.cc
++++ b/src/Material/GS20Mat.cc
+@@ -51,6 +51,32 @@ GS20Mat::GS20Mat() {
+     fMaterial->AddMaterial(Al2O3, 18.0 * perCent);
+     fMaterial->AddMaterial(Ce2O3,  4.0 * perCent);
+     fMaterial->AddMaterial(Li2O,  15.5 * perCent);
++
++    G4MaterialPropertiesTable* mpt = new G4MaterialPropertiesTable();
++
++    //本来はエネルギーでパラメータを登録する必要がある
++    //ヘルパー関数：[波長(nm), 値] の表からGeant4用の物性配列を自動登録する
++    auto AddPropertyFromNm = [&](const char* key, const std::vector<std::pair<double, double>>& data) {
++        std::vector<G4double> energies;
++        std::vector<G4double> values;
++
++        // Geant4は「エネルギー昇順」必須。データシートの「波長昇順」を後ろから読むとちょうどエネルギー昇順になる
++        for (auto it = data.rbegin(); it != data.rend(); ++it) //rbegin は reverse beginを指す（最後尾の要素からスタートする）
++        {
++            double nm = it->first;
++            energies.push_back((1239.84193 / nm) * eV); // λ(nm) -> E(eV) 変換
++            values.push_back(it->second);
++        }
++        mpt->AddProperty(key, energies, values, false, true);//4=新規か、5=spline補完を適用するか
++    };
++
++    //　光子の発生数
++    mpt->AddConstProperty("SCINTILLATIONYIELD", 10000. * 0.25 /MeV);   //カタログ上はplasticの20~30%
++    //　光子発生のばらつき（ポアソン分布）  
++    mpt->AddConstProperty("RESOLUTIONSCALE", 1.0); 
++    //単一の成分のみと仮定
++    mpt->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 70*ns);    
++
+ }
+ 
+ GS20Mat::~GS20Mat() {
+diff --git a/src/PhysicsList.cc b/src/PhysicsList.cc
+index 8322942..51a87bf 100644
+--- a/src/PhysicsList.cc
++++ b/src/PhysicsList.cc
+@@ -2,13 +2,16 @@
+ 
+ #include "G4RadioactiveDecayPhysics.hh"
+ #include "G4DecayPhysics.hh"
++#include "G4OpticalParameters.hh"
+ 
+ PhysicsList::PhysicsList(): FTFP_BERT_HP() //親クラスのコンストラクを呼ぶ
+ {
+     RegisterPhysics(new G4RadioactiveDecayPhysics());
+     //RegisterPhysics(new G4DecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
+-    RegisterPhysics(new G4EmLivermorePhysics());
++    ReplacePhysics(new G4EmLivermorePhysics()); //すでに登録されているEMstandardと交換する
+     RegisterPhysics(new G4OpticalPhysics());
++
++    G4OpticalParameters::Instance()->SetScintFiniteRiseTime(true); //Scintillatorの立ち上がり時間を考慮する
+ }
+ 
+ PhysicsList::~PhysicsList()
+diff --git a/src/PrimaryGeneratorMessenger.cc b/src/PrimaryGeneratorMessenger.cc
+index c35ec50..58a6f2c 100644
+--- a/src/PrimaryGeneratorMessenger.cc
++++ b/src/PrimaryGeneratorMessenger.cc
+@@ -13,8 +13,8 @@ PrimaryGeneratorMessenger::PrimaryGeneratorMessenger(PrimaryGenerator *action) :
+     // コマンドの作成
+     fSourceCmd = new G4UIcmdWithAString("/mygen/sourceType", this); 
+     // 指定したコマンドが入力されたときは、このクラス自身に通知されるようにする
+-    fSourceCmd->SetGuidance("Select soruce type: neutron, gamam, gamma(137Cs),137Cs, 90Sr, 90Y");
+-    fSourceCmd->SetCandidates("neutron gamma gamma(137Cs) 137Cs 90Sr 90Y");
++    fSourceCmd->SetGuidance("Select soruce type: neutron, electron, gamam, gamma(137Cs),137Cs, 90Sr, 90Y");
++    fSourceCmd->SetCandidates("neutron electron gamma gamma(137Cs) 137Cs 90Sr 90Y");
+ 
+     fSourceCmd->SetParameterName("type",false);
+     fSourceCmd->AvailableForStates(G4State_PreInit, G4State_Idle);
+diff --git a/src/RunAction.cc b/src/RunAction.cc
+index 1e12372..6f64d61 100644
+--- a/src/RunAction.cc
++++ b/src/RunAction.cc
+@@ -24,9 +24,11 @@ G4String GetOutputRootFileName(const G4Run* run)
+ RunAction::RunAction(EventAction *eventAction, RunConfig* runConfig) : fEventAction(eventAction), fRunConfig(runConfig)
+ {
+ 
+-    fAnalysisOutput.Book(fEventAction);
++    fAnalysisOutput.Book();
+ 
+-    //EventActionを介して、CathodeSDやScintiSDはAnalysisOutputを参照できるようにする
++    // EventActionがSDのmapを結合し、
++    // AnalysisOutputへ1チャンネルずつ渡す
++    // 実態を持っているのはRunActionで、EventActionはAnalysisOutputのポインタを保持するだけ
+     fEventAction->SetAnalysisOutput(&fAnalysisOutput);
+ }
+ 
+diff --git a/src/RunConfig.cc b/src/RunConfig.cc
+index 6250c3e..8e49013 100644
+--- a/src/RunConfig.cc
++++ b/src/RunConfig.cc
+@@ -12,15 +12,15 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+     fParticlesPerEvent = 1;
+     fPosition = G4ThreeVector(0., 0., 0.);
+ 
+-    /*
++    
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+-        fEnergy = 1.00 * MeV;
++        fEnergy = 0.5 * MeV;
+         fEnergyUnitName = "MeV";
+         fDirectionMode = DirectionMode::RandomIsotropic;
+     }
+-    */
+-
++    
++    /*
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+         fEnergy = 1.00 * MeV;
+@@ -28,14 +28,21 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+         fFixedDirection = G4ThreeVector(1., 0., 0.);
+         fDirectionMode = DirectionMode::Fixed;    
+     }
++    */
+ 
++    else if (sourceType == "electron") {
++        fParticleName = "e-";
++        fEnergy = 50.0 * keV;
++        fEnergyUnitName = "keV";
++        fDirectionMode = DirectionMode::RandomIsotropic;
++    }
+ 
+     else if (sourceType == "gamma") {
+         fParticleName = "gamma";
+-        fEnergy = 1.00 * MeV;
++        fEnergy =  2.3 * MeV;
+         fEnergyUnitName = "MeV";
+-        fFixedDirection = G4ThreeVector(1., 0., 0.);
+-        fDirectionMode = DirectionMode::Fixed;
++        //fFixedDirection = G4ThreeVector(1., 0., 0.);
++        fDirectionMode = DirectionMode::RandomIsotropic;
+     }
+     else if (sourceType == "gamma(137Cs)") {
+         fParticleName = "gamma";
+diff --git a/src/ScintiSD.cc b/src/ScintiSD.cc
+index 3f4270b..29f3816 100644
+--- a/src/ScintiSD.cc
++++ b/src/ScintiSD.cc
+@@ -1,50 +1,70 @@
+ #include "ScintiSD.hh"
+ 
+ #include "G4OpticalPhoton.hh"
+-#include "G4EventManager.hh"
+ #include "G4EmSaturation.hh"
+ #include "G4LossTableManager.hh"
+ #include "G4Neutron.hh"
+ #include "G4VProcess.hh"
+ #include "G4ProcessType.hh"
+ 
+-#include "EventAction.hh"
+-#include "AnalysisOutput.hh"
+-
+ 
++namespace {
++    //CathodeSD.ccと異なるので注意
++    constexpr G4int kDetectorDepth = 1;
++}
+ 
+ ScintiSD::ScintiSD(G4String name)
+- : G4VSensitiveDetector(name),
+-   fTotalEdep(0.0),
+-   fTotalEvis(0.0),
+-   fGeneratedPhotons(0.0),
+-   fFirstHitTime(-1.0),
+-   fFirstHitPosGlobal(-99999.0, -99999.0, -99999.0), 
+-   fFirstHitPosLocal(-99999.0, -99999.0, -99999.0),
+-   fNeutronInteractionCount(0)
++ : G4VSensitiveDetector(name)
+ {
+ }
+ 
+ 
+ 
+ void ScintiSD::Initialize(G4HCofThisEvent*) {
+-    fTotalEdep = 0.0;
+-    fTotalEvis = 0.0;
+-    fGeneratedPhotons = 0.0;
+-    fFirstHitTime = -1.0;
+-    fFirstHitPosGlobal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
+-    fFirstHitPosLocal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
+-    fNeutronInteractionCount = 0;
++    fScintiData.clear();
+ }
+ 
+ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
+ 
+-    auto* track = step->GetTrack();
+-    auto* prePoint = step->GetPreStepPoint();
+-    auto* postPoint = step->GetPostStepPoint();
++    // 1. G4Stepと関連オブジェクトを取得
++    if (step == nullptr) {
++        return false;
++    }
++
++    const auto* track = step->GetTrack();
++    const auto* prePoint = step->GetPreStepPoint();
++    const auto* postPoint = step->GetPostStepPoint();
++
++    if (track == nullptr
++        || prePoint == nullptr
++        || postPoint == nullptr) {
++        return false;
++    }
++
++    // 2. このstepが発生した検出器を識別
++    const auto* touchable = prePoint->GetTouchable();
++
++    if (touchable == nullptr) {
++        return false;
++    }
++
++    if (touchable->GetHistoryDepth() < kDetectorDepth) {
++        return false;
++    }
++
++    const G4int detectorCopyNo =touchable->GetCopyNumber(kDetectorDepth);
++
++    if (detectorCopyNo < 0) {
++        return false;
++    }
++
++    const DetectorKey detectorKey{detectorCopyNo};
+ 
+-    const G4VProcess* process =
+-        postPoint->GetProcessDefinedStep();
++    // 3. 対象検出器のイベントデータを取得
++    ScintiEventData& data = fScintiData[detectorKey];
++
++    // 4.　一次中性子のhadronic反応を判定
++    const G4VProcess* process = postPoint->GetProcessDefinedStep();
+ 
+     const G4bool isNeutron =
+         track->GetDefinition()
+@@ -61,24 +81,20 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
+     if (isPrimaryNeutron && isHadronicInteraction) {
+ 
+         // 最初の中性子hadronic反応位置
+-        if (fNeutronInteractionCount == 0) {
+-            // preとpostの中点を反応点とする
+-            fFirstHitPosGlobal = postPoint->GetPosition();
+-            fFirstHitTime = postPoint->GetGlobalTime();
++        if (data.neutronInteractionCount == 0) {
++            data.firstHitPosGlobal = postPoint->GetPosition();
++            data.firstHitTime= postPoint->GetGlobalTime();
+                 
+-            auto touchable =
+-                prePoint->GetTouchable();
+-
+             const G4AffineTransform& transform =
+                 touchable->GetHistory()->GetTopTransform();
+ 
+-            fFirstHitPosLocal =
++            data.firstHitPosLocal =
+                 transform.TransformPoint(
+-                    fFirstHitPosGlobal
++                    data.firstHitPosGlobal
+                 );
+         }
+ 
+-        ++fNeutronInteractionCount;
++        ++data.neutronInteractionCount;
+     }
+ 
+ 
+@@ -96,8 +112,8 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
+     const G4double evis =
+         saturation->VisibleEnergyDepositionAtAStep(step);
+ 
+-    fTotalEdep += edep;
+-    fTotalEvis += evis;
++    data.totalEdep += edep;
++    data.totalEvis += evis;
+ 
+     // Scintillation光の取得
+     const auto* secondaries =
+@@ -113,7 +129,7 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
+                 && creator
+                 && creator->GetProcessName()
+                     == "Scintillation") {
+-                ++fGeneratedPhotons;
++                ++data.generatedPhotons;
+             }
+         }
+     }
+@@ -121,17 +137,16 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
+     return true;
+ }
+ 
+-void ScintiSD::EndOfEvent(G4HCofThisEvent*) {
++const ScintiEventData* ScintiSD::FindScintiData(const DetectorKey& detectorKey) const{
+ 
+-     auto eventAction =
+-        static_cast<EventAction*>(
+-            G4EventManager::GetEventManager()->GetUserEventAction()
+-        );
++    const auto iter = fScintiData.find(detectorKey);
+ 
+-    if(!eventAction) return;
++    if (iter == fScintiData.end()){
++        return nullptr;
++    }
+ 
+-    auto output = eventAction->GetAnalysisOutput();
+-    if(!output) return;
++    return &(iter->second);
++}
+ 
+-    output->FillScinti(fTotalEdep, fTotalEvis, fGeneratedPhotons, fFirstHitTime, fNeutronInteractionCount);
++void ScintiSD::EndOfEvent(G4HCofThisEvent*) {
+ }
+\ No newline at end of file
+diff --git a/src/SteppingAction.cc b/src/SteppingAction.cc
+index de92a8d..7bb7749 100644
+--- a/src/SteppingAction.cc
++++ b/src/SteppingAction.cc
+@@ -1,6 +1,13 @@
+ #include "SteppingAction.hh"
++#include "CathodeSD.hh"
++
+ #include "G4OpticalPhoton.hh"
+ #include "G4SystemOfUnits.hh"
++#include "G4LogicalVolume.hh"
++#include "G4OpBoundaryProcess.hh"
++#include "G4ProcessManager.hh"
++#include "G4VProcess.hh"
++#include "G4VPhysicalVolume.hh"
+ 
+ SteppingAction::SteppingAction()
+  : G4UserSteppingAction()
+@@ -8,50 +15,71 @@ SteppingAction::SteppingAction()
+ }
+ 
+ void SteppingAction::UserSteppingAction(const G4Step* step) {
++
++    if(step == nullptr){
++        return ;
++    }
++
+     G4Track* track = step->GetTrack();
+ 
+-    /*
+-    // 1. 今飛んでいるのが「光学光子」であるかチェック
+-    if (track->GetDefinition() == G4OpticalPhoton::OpticalPhotonDefinition()) {
+-
+-        // 境界反射などで移動距離が 1ピコメートル(1e-12 mm)以下の「足踏みステップ」を検出
+-        if (step->GetStepLength() <= 1e-12 * mm) {
+-            
+-            // マルチスレッド(G4WT)環境でも安全に記録できる thread_local 変数を使用
+-            static thread_local G4int lastTrackID = -1;
+-            static thread_local G4int zeroStepCount = 0;
+-            
+-            // 同じ光子(Track)が連続で足踏みしているかカウント
+-            if (track->GetTrackID() == lastTrackID) {
+-                zeroStepCount++;
+-            } else {
+-                lastTrackID = track->GetTrackID();
+-                zeroStepCount = 1;
+-            }
++    //光学光子であるか判定
++    if(track->GetDefinition() != G4OpticalPhoton::OpticalPhotonDefinition()){
++        return;
++    }
++    
++    //初回のみ判定　
++    if (fBoundary == nullptr){
++        auto* processManager = track->GetDefinition()->GetProcessManager();
+ 
+-            // Geant4カーネルが処刑(25回でAbort)する遥か手前、
+-            // 「4回連続」で足踏みしたら角っこトラップとみなして即座に消滅させる！
+-            if (zeroStepCount >= 24) {
+-                track->SetTrackStatus(fStopAndKill);
+-                return;
+-            }
++        if (processManager == nullptr){
++            return;
+         }
+ 
+-        
+-        // 2. 【グローバル・キルスイッチ】
+-        // 今いる部屋が Mother(真空箱) だろうと Guide だろうと関係なく、
+-        // 500ステップを超えたら無限ピンポン反射トラップとみなして強制キル(生き残る確率は1.36x10-19)
+-        if (track->GetCurrentStepNumber() > 500) {
+-            track->SetTrackStatus(fStopAndKill);
+-            
+-            // ※必要に応じてデバッグ確認用にコメントアウトを外してください
+-            // G4cout << "[SteppingAction] Stuck photon killed at step " 
+-            //        << track->GetCurrentStepNumber() << " in volume : " 
+-            //        << track->GetVolume()->GetName() << G4endl;
+-            return;
++        auto* processList = processManager->GetProcessList();
++
++        const G4int processCount = processManager->GetProcessListLength();
++
++        //全プロセスから境界判定のプロセスのみ引き抜く
++        for (G4int i = 0; i < processCount; i++){
++            auto* process = (*processList)[i];
++
++            if (process != nullptr && process->GetProcessName() == "OpBoundary"){
++                fBoundary = dynamic_cast<G4OpBoundaryProcess*>(process);
++                //境界判定が見つかれば終了
++                break;
++            }
+         }
+-        
+     }
+-    */
+ 
++    if (fBoundary == nullptr){
++        return;
++    }
++
++    const auto* postPoint = step->GetPostStepPoint();
++
++    // boundary statusは境界stepでのみ有効
++    if (postPoint->GetStepStatus()!= fGeomBoundary) {
++        return;
++    }
++
++    // 現在EFFICIENCYを持つoptical surfaceはCathodeSurfaceのみ
++    if (fBoundary->GetStatus() != Detection) {
++        return;
++    }
++
++    auto* postVolume = postPoint->GetPhysicalVolume();
++
++    if (postVolume == nullptr) {
++        return;
++    }
++
++    auto* sensitiveDetector = postVolume->GetLogicalVolume()->GetSensitiveDetector();
++
++    auto* cathodeSD = dynamic_cast<CathodeSD*>(sensitiveDetector);
++
++    if (cathodeSD == nullptr){
++        return;
++    }
++
++    cathodeSD->ProcessBoundaryHit(step);
+ }
+\ No newline at end of file
+diff --git a/src/Surface/UROKO/BC620Surface.cc b/src/Surface/UROKO/BC620Surface.cc
+index 626cdb8..07080fc 100644
+--- a/src/Surface/UROKO/BC620Surface.cc
++++ b/src/Surface/UROKO/BC620Surface.cc
+@@ -14,8 +14,8 @@ BC620Surface::BC620Surface() {
+     G4MaterialPropertiesTable* mpt = new G4MaterialPropertiesTable();
+ 
+     std::vector<G4double> ephoton = { 2.034 * eV, 4.136 * eV }; //298~610nm
+-    std::vector<G4double> ref     = { 0.95, 0.95 }; //厳密には波長依存性あり
+     std::vector<G4double> rindex  = { 2.1,  2.1  };
++     std::vector<G4double> ref     = { 0.95, 0.95 }; //厳密には波長依存性あり
+     std::vector<G4double> spike   = { 0.0,  0.0  };
+     std::vector<G4double> lobe    = { 0.0,  0.0  };
+     std::vector<G4double> back    = { 0.0,  0.0  };

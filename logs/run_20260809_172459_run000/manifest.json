@@ -1,0 +1,7 @@
+{
+  "run_label": "run_20260809_172459_run000",
+  "root_file": "/home/hashizume/Geant4-project/triumf2023_test/root/run_20260809_172459_run000.root",
+  "log_dir": "/home/hashizume/Geant4-project/triumf2023_test/logs/run_20260809_172459_run000",
+  "macro_file": "build/run_gamma.mac",
+  "status": "completed"
+}

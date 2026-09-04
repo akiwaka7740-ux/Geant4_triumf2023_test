@@ -1,0 +1,191 @@
+diff --git a/analysis/PlotFigure.C b/analysis/PlotFigure.C
+index 00b0cdd..1199ed8 100644
+--- a/analysis/PlotFigure.C
++++ b/analysis/PlotFigure.C
+@@ -4,6 +4,10 @@
+ #include <TH1D.h>
+ #include <TH2D.h>
+ 
++/*
++テスト結果をPDFに出力する。
++簡易的に色々な物理量を確認するために使用する。
++*/
+ 
+ 
+ TString MakePdfPath(TString filename){
+@@ -14,12 +18,65 @@ TString MakePdfPath(TString filename){
+     return "logs/" + base + "/" + "results.pdf";
+ }
+ 
++bool CanWritePdf(const TString& pdfPath)
++{
++    const TString outputDirectory = gSystem->DirName(pdfPath);
++
++    // AccessPathName() はアクセスできない場合に true を返す
++    if (gSystem->AccessPathName(outputDirectory, kFileExists)) {
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリが存在しません: "
++            << outputDirectory.Data()
++            << "\nCurrent working directory: "
++            << gSystem->WorkingDirectory()
++            << '\n';
++
++        return false;
++    }
++
++    // ディレクトリでは、書き込み権限と実行（検索）権限の両方が必要
++    if (gSystem->AccessPathName(outputDirectory, kWritePermission) ||
++        gSystem->AccessPathName(outputDirectory, kExecutePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリに書き込めません: "
++            << outputDirectory.Data()
++            << '\n';
++
++        return false;
++    }
++
++    // 既存のPDFを上書きできるか確認
++    const bool pdfAlreadyExists =
++        !gSystem->AccessPathName(pdfPath, kFileExists);
++
++    if (pdfAlreadyExists &&
++        gSystem->AccessPathName(pdfPath, kWritePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: 既存のPDFを上書きできません: "
++            << pdfPath.Data()
++            << '\n';
++
++        return false;
++    }
++
++    return true;
++}
++
+ std::vector<ROOT::RDF::RResultPtr<TH1D>> gHistograms1D;
+ std::vector<ROOT::RDF::RResultPtr<TH2D>> gHistograms2D;
+ std::vector<ROOT::RDF::RResultPtr<TH3D>> gHistograms3D;
+ 
+ 
+ void PlotFigure(TString filename){
++
++    //出力ディレクトリが存在するかを確認
++    TString pdfPath = MakePdfPath(filename);
++    if(!CanWritePdf(pdfPath)){
++        return;
++    }   
++
+     ROOT::RDataFrame df("tree",filename);
+ 
+     auto selected = df
+@@ -147,7 +204,7 @@ void PlotFigure(TString filename){
+     auto report = selected.Report();
+     report->Print();
+ 
+-    TString pdfPath = MakePdfPath(filename);
++
+ 
+     TCanvas *c1 = new TCanvas("c1","c1", 800, 600);
+     hScintiEdep->Draw();
+diff --git a/macros/run.mac b/macros/run.mac
+index 1294dd0..6754d8a 100644
+--- a/macros/run.mac
++++ b/macros/run.mac
+@@ -1,5 +1,5 @@
+ # run.mac の内容
+ /run/initialize
+ /mygen/sourceType neutron
+-/run/printProgress 1000000
+-/run/beamOn 20000
++/run/printProgress 100000
++/run/beamOn 10000000
+diff --git a/src/DetectorConstruction.cc b/src/DetectorConstruction.cc
+index 0d0b3eb..a4774c3 100644
+--- a/src/DetectorConstruction.cc
++++ b/src/DetectorConstruction.cc
+@@ -172,7 +172,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
+     //ターゲット検出器間の距離は 1000 mm
+     //G4ThreeVector pos_UROKO[1] = { G4ThreeVector(1000*mm, 0, 0) };
+ 
+-    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1500.0*mm, 0, 0) };
++    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1000.0*mm, 0, 0) };
+ 
+     G4RotationMatrix rot_UROKO[1];
+     rot_UROKO[0].rotateY(90.0*deg);
+diff --git a/src/LogVol/UROKOLogVol.cc b/src/LogVol/UROKOLogVol.cc
+index c33699b..aeb0350 100644
+--- a/src/LogVol/UROKOLogVol.cc
++++ b/src/LogVol/UROKOLogVol.cc
+@@ -215,9 +215,9 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+   new G4LogicalSkinSurface("CathodeSkin", LogVol_Cathode, surfCathode);
+ 
+   //[BorderSurface] 接合面の上書き
+-  // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
+-  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
++  // ①【前面】シンチからバンパー へ進む光だけ、鏡面スキンを「乱反射」で上書き
++  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
++  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+   
+   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
+ 
+diff --git a/src/PhysicsList.cc b/src/PhysicsList.cc
+index 8322942..eecc01b 100644
+--- a/src/PhysicsList.cc
++++ b/src/PhysicsList.cc
+@@ -7,7 +7,7 @@ PhysicsList::PhysicsList(): FTFP_BERT_HP() //親クラスのコンストラク
+ {
+     RegisterPhysics(new G4RadioactiveDecayPhysics());
+     //RegisterPhysics(new G4DecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
+-    RegisterPhysics(new G4EmLivermorePhysics());
++    ReplacePhysics(new G4EmLivermorePhysics()); //すでに登録されているEMstandardと交換する
+     RegisterPhysics(new G4OpticalPhysics());
+ }
+ 
+diff --git a/src/RunConfig.cc b/src/RunConfig.cc
+index 6250c3e..ed7315a 100644
+--- a/src/RunConfig.cc
++++ b/src/RunConfig.cc
+@@ -12,15 +12,16 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+     fParticlesPerEvent = 1;
+     fPosition = G4ThreeVector(0., 0., 0.);
+ 
+-    /*
++    
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+-        fEnergy = 1.00 * MeV;
++        fEnergy = 2.00 * MeV;
+         fEnergyUnitName = "MeV";
+         fDirectionMode = DirectionMode::RandomIsotropic;
+     }
+-    */
++    
+ 
++    /*
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+         fEnergy = 1.00 * MeV;
+@@ -28,6 +29,7 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+         fFixedDirection = G4ThreeVector(1., 0., 0.);
+         fDirectionMode = DirectionMode::Fixed;    
+     }
++    */
+ 
+ 
+     else if (sourceType == "gamma") {
+diff --git a/src/Surface/UROKO/BC620Surface.cc b/src/Surface/UROKO/BC620Surface.cc
+index 626cdb8..07080fc 100644
+--- a/src/Surface/UROKO/BC620Surface.cc
++++ b/src/Surface/UROKO/BC620Surface.cc
+@@ -14,8 +14,8 @@ BC620Surface::BC620Surface() {
+     G4MaterialPropertiesTable* mpt = new G4MaterialPropertiesTable();
+ 
+     std::vector<G4double> ephoton = { 2.034 * eV, 4.136 * eV }; //298~610nm
+-    std::vector<G4double> ref     = { 0.95, 0.95 }; //厳密には波長依存性あり
+     std::vector<G4double> rindex  = { 2.1,  2.1  };
++     std::vector<G4double> ref     = { 0.95, 0.95 }; //厳密には波長依存性あり
+     std::vector<G4double> spike   = { 0.0,  0.0  };
+     std::vector<G4double> lobe    = { 0.0,  0.0  };
+     std::vector<G4double> back    = { 0.0,  0.0  };

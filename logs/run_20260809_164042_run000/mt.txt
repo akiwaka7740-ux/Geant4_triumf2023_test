@@ -1,0 +1,4 @@
+MODE=multithread
+NUMBER_OF_THREADS=12
+NUMBER_OF_CORES=16
+THREAD_POLICY=cores_minus_4_min_1

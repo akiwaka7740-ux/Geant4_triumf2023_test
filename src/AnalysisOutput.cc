@@ -1,131 +1,385 @@
 #include "AnalysisOutput.hh"
-#include "EventAction.hh"
+#include "ScintiSD.hh"
+#include "CathodeSD.hh"
+#include "DetectorChannelKey.hh"
+
 #include "G4AnalysisManager.hh"
 
-void AnalysisOutput::Book(EventAction* eventAction)
+#include <cmath>
+
+void AnalysisOutput::Book()
 {
-    auto analysisManager = G4AnalysisManager::Instance();
+    auto* analysisManager = G4AnalysisManager::Instance();
 
     analysisManager->SetNtupleMerging(true);
-    analysisManager->CreateNtuple("tree", "tree");
+
+    fNtupleId =
+        analysisManager->CreateNtuple(
+            "tree",
+            "Detector and PMT channel data"
+        );
+
+    fRunId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "RunID"
+        );
+
+    fEventId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "EventID"
+        );
+
+    fDetectorCopyNo =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "DetectorCopyNo"
+        );
+
+    fPmtCopyNo =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "PmtCopyNo"
+        );
+
+    fIsDetectorRepresentative =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "IsDetectorRepresentative"
+        );
 
     fScintiEdep =
-        analysisManager->CreateNtupleDColumn("Scinti_Edep");
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "ScintiEdep"
+        );
+
     fScintiEvis =
-        analysisManager->CreateNtupleDColumn("Scinti_Evis");
-    fScintiPhotons =
-        analysisManager->CreateNtupleDColumn("Scinti_Photons");
-    fScintiInteractionCount =
-        analysisManager->CreateNtupleIColumn("Scinti_InteractionCount");
-
-    fScintiHitTime =
-        analysisManager->CreateNtupleDColumn("Scinti_HitTime");
-
-    fScintiHitPosGlobal =
         analysisManager->CreateNtupleDColumn(
-            "Scinti_HitPos_Global",
-            eventAction->GetScintiPosGlobalRef()
-        );
-    fScintiHitPosLocal =
-        analysisManager->CreateNtupleDColumn(
-            "Scinti_HitPos_Local",
-            eventAction->GetScintiPosLocalRef()
-        );
-    fScintiHitPosRadius =
-        analysisManager->CreateNtupleDColumn("Scinti_HitPos_Radius");
-
-    fPMTSumPhotons =
-        analysisManager->CreateNtupleIColumn("PMT_SUM_Photons");
-    fPMTSumEfficiency =
-        analysisManager->CreateNtupleDColumn("PMT_SUM_Efficiency");
-    fPMT1Photons =
-        analysisManager->CreateNtupleIColumn("PMT1_Photons");
-    fPMT1Efficiency =
-        analysisManager->CreateNtupleDColumn("PMT1_Efficiency");
-    fPMT2Photons =
-        analysisManager->CreateNtupleIColumn("PMT2_Photons");
-    fPMT2Efficiency =
-        analysisManager->CreateNtupleDColumn("PMT2_Efficiency");
-
-    fPMT1HitTimes =
-        analysisManager->CreateNtupleDColumn(
-            "PMT1_HitTimes",
-            eventAction->GetHitTimeListRef(0)
-        );
-    fPMT1HitPosX =
-        analysisManager->CreateNtupleDColumn(
-            "PMT1_HitPos_X",
-            eventAction->GetHitPosXListRef(0)
-        );
-    fPMT1HitPosY =
-        analysisManager->CreateNtupleDColumn(
-            "PMT1_HitPos_Y",
-            eventAction->GetHitPosYListRef(0)
-        );
-    fPMT1HitPosZ =
-        analysisManager->CreateNtupleDColumn(
-            "PMT1_HitPos_Z",
-            eventAction->GetHitPosZListRef(0)
+            fNtupleId,
+            "ScintiEvis"
         );
 
-    fPMT2HitTimes =
+    fGeneratedPhotons =
         analysisManager->CreateNtupleDColumn(
-            "PMT2_HitTimes",
-            eventAction->GetHitTimeListRef(1)
-        );
-    fPMT2HitPosX =
-        analysisManager->CreateNtupleDColumn(
-            "PMT2_HitPos_X",
-            eventAction->GetHitPosXListRef(1)
-        );
-    fPMT2HitPosY =
-        analysisManager->CreateNtupleDColumn(
-            "PMT2_HitPos_Y",
-            eventAction->GetHitPosYListRef(1)
-        );
-    fPMT2HitPosZ =
-        analysisManager->CreateNtupleDColumn(
-            "PMT2_HitPos_Z",
-            eventAction->GetHitPosZListRef(1)
+            fNtupleId,
+            "GeneratedPhotons"
         );
 
-    analysisManager->FinishNtuple(0);
+    fNeutronInteractionCount =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "NeutronInteractionCount"
+        );
+
+    fFirstHitTime =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitTime"
+        );
+
+    fFirstHitGlobalX =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitGlobalX"
+        );
+
+    fFirstHitGlobalY =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitGlobalY"
+        );
+
+    fFirstHitGlobalZ =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitGlobalZ"
+        );
+
+    fFirstHitLocalX =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitLocalX"
+        );
+
+    fFirstHitLocalY =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitLocalY"
+        );
+
+    fFirstHitLocalZ =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitLocalZ"
+        );
+
+    fFirstHitRadius =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitRadius"
+        );
+
+    fArrivedPhotons =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "ArrivedPhotons"
+        );
+
+    fDetectedPhotons =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "DetectedPhotons"
+        );
+
+    fArrivalEfficiency =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "ArrivalEfficiency"
+        );
+
+    fDetectionEfficiency =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "DetectionEfficiency"
+        );
+
+    fSumArrivedPhotons =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "PmtSumArrivedPhotons"
+        );
+
+    fSumDetectedPhotons =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "PmtSumDetectedPhotons"
+        );
+
+    fSumArrivalEfficiency =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "PmtSumArrivalEfficiency"
+        );
+
+    fSumDetectionEfficiency =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "PmtSumDetectionEfficiency"
+        );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "HitTimes",
+        fHitTimes
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "HitPosX",
+        fHitPosX
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "HitPosY",
+        fHitPosY
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "HitPosZ",
+        fHitPosZ
+    );
+
+    analysisManager->FinishNtuple(
+        fNtupleId
+    );
 }
 
-void AnalysisOutput::FillScinti(G4double edep, G4double evis, G4double generatedPhotons, G4double firstHitTime, G4int neutronInteractionCount)
+void AnalysisOutput::FillChannelRow(
+    G4int runId,
+    G4int eventId,
+    const PmtChannelKey& channelKey,
+    const ScintiEventData& scintiData,
+    const PmtEventData& pmtData,
+    G4int sumArrivedPhotons,
+    G4int sumDetectedPhotons,
+    G4double arrivalEfficiency,
+    G4double detectionEfficiency,
+    G4double sumArrivalEfficiency,
+    G4double sumDetectionEfficiency
+)
 {
-    auto analysisManager = G4AnalysisManager::Instance();
+    auto* analysisManager =
+        G4AnalysisManager::Instance();
 
-    analysisManager->FillNtupleDColumn(fScintiEdep, edep);
-    analysisManager->FillNtupleDColumn(fScintiEvis, evis);
-    analysisManager->FillNtupleDColumn(fScintiPhotons, generatedPhotons);
-    analysisManager->FillNtupleDColumn(fScintiHitTime, firstHitTime);
-    analysisManager->FillNtupleIColumn(fScintiInteractionCount, neutronInteractionCount);
-}
+    // vector branch用バッファ
+    fHitTimes = pmtData.hitTimes;
 
-void AnalysisOutput::FillPMTPhotons(G4int pmt1Photons, G4int pmt2Photons)
-{
-    auto analysisManager = G4AnalysisManager::Instance();
+    fHitPosX.clear();
+    fHitPosY.clear();
+    fHitPosZ.clear();
 
-    analysisManager->FillNtupleIColumn(fPMTSumPhotons, pmt1Photons + pmt2Photons);
+    fHitPosX.reserve(
+        pmtData.hitPositions.size()
+    );
+    fHitPosY.reserve(
+        pmtData.hitPositions.size()
+    );
+    fHitPosZ.reserve(
+        pmtData.hitPositions.size()
+    );
 
-    analysisManager->FillNtupleIColumn(fPMT1Photons, pmt1Photons);
-    analysisManager->FillNtupleIColumn(fPMT2Photons, pmt2Photons);
-}
+    for (const auto& position
+         : pmtData.hitPositions) {
+        fHitPosX.push_back(position.x());
+        fHitPosY.push_back(position.y());
+        fHitPosZ.push_back(position.z());
+    }
 
-void AnalysisOutput::FillEventSummary(G4double scintiHitRadius, G4double pmt1Efficiency, G4double pmt2Efficiency)
-{
-    auto analysisManager = G4AnalysisManager::Instance();
+    G4double firstHitRadius = -99999.0;
 
-    analysisManager->FillNtupleDColumn(fScintiHitPosRadius, scintiHitRadius);
+    if (scintiData.neutronInteractionCount > 0) {
+        firstHitRadius = std::sqrt(
+            scintiData.firstHitPosLocal.x()
+                * scintiData.firstHitPosLocal.x()
+            + scintiData.firstHitPosLocal.y()
+                * scintiData.firstHitPosLocal.y()
+        );
+    }
 
-    analysisManager->FillNtupleDColumn(fPMTSumEfficiency, (pmt1Efficiency + pmt2Efficiency));
-    analysisManager->FillNtupleDColumn(fPMT1Efficiency, pmt1Efficiency);
-    analysisManager->FillNtupleDColumn(fPMT2Efficiency, pmt2Efficiency);
-}
+    const G4int isRepresentative =
+        channelKey.pmtCopyNo == 0
+        ? 1
+        : 0;
 
-void AnalysisOutput::AddRow()
-{
-    auto analysisManager = G4AnalysisManager::Instance();
-    analysisManager->AddNtupleRow(0);
+    auto fillI =
+        [&](G4int columnId, G4int value) {
+            analysisManager->FillNtupleIColumn(
+                fNtupleId,
+                columnId,
+                value
+            );
+        };
+
+    auto fillD =
+        [&](G4int columnId, G4double value) {
+            analysisManager->FillNtupleDColumn(
+                fNtupleId,
+                columnId,
+                value
+            );
+        };
+
+    fillI(fRunId, runId);
+    fillI(fEventId, eventId);
+
+    fillI(
+        fDetectorCopyNo,
+        channelKey.detector.detectorCopyNo
+    );
+
+    fillI(
+        fPmtCopyNo,
+        channelKey.pmtCopyNo
+    );
+
+    fillI(
+        fIsDetectorRepresentative,
+        isRepresentative
+    );
+
+    fillD(fScintiEdep, scintiData.totalEdep);
+    fillD(fScintiEvis, scintiData.totalEvis);
+    fillD(
+        fGeneratedPhotons,
+        scintiData.generatedPhotons
+    );
+
+    fillI(
+        fNeutronInteractionCount,
+        scintiData.neutronInteractionCount
+    );
+
+    fillD(
+        fFirstHitTime,
+        scintiData.firstHitTime
+    );
+
+    fillD(
+        fFirstHitGlobalX,
+        scintiData.firstHitPosGlobal.x()
+    );
+    fillD(
+        fFirstHitGlobalY,
+        scintiData.firstHitPosGlobal.y()
+    );
+    fillD(
+        fFirstHitGlobalZ,
+        scintiData.firstHitPosGlobal.z()
+    );
+
+    fillD(
+        fFirstHitLocalX,
+        scintiData.firstHitPosLocal.x()
+    );
+    fillD(
+        fFirstHitLocalY,
+        scintiData.firstHitPosLocal.y()
+    );
+    fillD(
+        fFirstHitLocalZ,
+        scintiData.firstHitPosLocal.z()
+    );
+
+    fillD(
+        fFirstHitRadius,
+        firstHitRadius
+    );
+
+    fillI(
+        fArrivedPhotons,
+        pmtData.arrivedPhotons
+    );
+
+    fillI(
+        fDetectedPhotons,
+        pmtData.detectedPhotons
+    );
+
+    fillD(
+        fArrivalEfficiency,
+        arrivalEfficiency
+    );
+
+    fillD(
+        fDetectionEfficiency,
+        detectionEfficiency
+    );
+
+    fillI(
+        fSumArrivedPhotons,
+        sumArrivedPhotons
+    );
+
+    fillI(
+        fSumDetectedPhotons,
+        sumDetectedPhotons
+    );
+
+    fillD(
+        fSumArrivalEfficiency,
+        sumArrivalEfficiency
+    );
+
+    fillD(
+        fSumDetectionEfficiency,
+        sumDetectionEfficiency
+    );
+
+    analysisManager->AddNtupleRow(
+        fNtupleId
+    );
 }

@@ -24,9 +24,11 @@ G4String GetOutputRootFileName(const G4Run* run)
 RunAction::RunAction(EventAction *eventAction, RunConfig* runConfig) : fEventAction(eventAction), fRunConfig(runConfig)
 {
 
-    fAnalysisOutput.Book(fEventAction);
+    fAnalysisOutput.Book();
 
-    //EventActionを介して、CathodeSDやScintiSDはAnalysisOutputを参照できるようにする
+    // EventActionがSDのmapを結合し、
+    // AnalysisOutputへ1チャンネルずつ渡す
+    // 実態を持っているのはRunActionで、EventActionはAnalysisOutputのポインタを保持するだけ
     fEventAction->SetAnalysisOutput(&fAnalysisOutput);
 }
 

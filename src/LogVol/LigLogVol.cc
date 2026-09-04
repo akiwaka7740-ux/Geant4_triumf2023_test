@@ -1,5 +1,14 @@
 #include "LogVol/LigLogVol.hh"
 #include "Material/GS20Mat.hh"
+#include "Material/PMTGlassMat.hh"
+#include "Material/BC408Mat.hh"
+
+#include "Surface/UROKO/CathodeSurface.hh"
+#include "Surface/UROKO/DielectricSurface.hh"
+#include "Surface/UROKO/MirrorSurface.hh"
+#include "Surface/UROKO/DiffuseSurface.hh"
+#include "Surface/UROKO/BC620Surface.hh"
+#include "Surface/UROKO/TybekSurface.hh"
 
 #include "G4Box.hh"
 #include "G4Cons.hh"
@@ -10,12 +19,12 @@
 #include "G4SubtractionSolid.hh"
 #include "G4ThreeVector.hh"
 #include "G4Transform3D.hh"
-
 #include "G4SystemOfUnits.hh"
-
 #include "G4NistManager.hh"
 #include "G4PVPlacement.hh"
 #include "G4VisAttributes.hh"
+#include "G4LogicalBorderSurface.hh"
+#include "G4LogicalSkinSurface.hh"
 
 using namespace CLHEP;
 
@@ -109,17 +118,24 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
 
   // これらを全て包み込む「親ボリューム（Mother Volume）」の作成
   double offset = 28.5*mm; //磁気シールドの表面からシンチレータまでの距離
-  double total_length = offset + thickness_Lig + cathode_T_Lig + PMT_L_Lig; // 28.5 + 246 mm
+  double total_length = offset + thickness_Lig + PMT_L_Lig; // 28.5 + 245 mm
   double max_radius   = MagShield_W_Lig / 2.; // 最大半径(MagShield)
   Solid = new G4Tubs(Name+"_Solid", 0, max_radius, total_length/2., 0, 2*pi);
 
   ////////////////////////////////////////////////////////////////////
   //// Material
   GS20Mat* fGS20 = new GS20Mat();
-  auto Mat  = G4NistManager::Instance()->FindOrBuildMaterial("G4_Galactic"); // 親空間は真空
-  auto Mat0 = fGS20->GetMaterial();
+  PMTGlassMat* fPMTGlass = new PMTGlassMat();
+  BC408Mat* fBC408 = new BC408Mat();
+
+  auto Mat  = G4NistManager::Instance()->FindOrBuildMaterial("G4_AIR"); // 親空間は空気（Scinti表面とShield先頭までの空間は空気で埋められているはず）
+  //auto Mat0 = fGS20->GetMaterial();
+
+  //テスト用
+  auto Mat0 = fBC408->GetMaterial();
+
   auto Mat1 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Al");
-  auto Mat2 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Pyrex_Glass");
+  auto Mat2 = fPMTGlass->GetMaterial();
   auto Mat3 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Fe");
 
 
@@ -129,8 +145,8 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
   LogVol -> SetVisAttributes( new G4VisAttributes(TRUE,Color(ColID::White,0.0) )); // 親は見えないようにする
     
   LogVol0 = new G4LogicalVolume(tmp0, Mat0, Name+"_LogVol0", 0, 0, fStepLimit, false);
-  G4LogicalVolume* LogVol1 = new G4LogicalVolume(tmp1, Mat1, Name+"_LogVol1", 0, 0, fStepLimit, false);
-  G4LogicalVolume* LogVol2 = new G4LogicalVolume(tmp2, Mat2, Name+"_LogVol2", 0, 0, fStepLimit, false);
+  LogVol1 = new G4LogicalVolume(tmp1, Mat1, Name+"_LogVol1", 0, 0, fStepLimit, false);
+  LogVol2 = new G4LogicalVolume(tmp2, Mat2, Name+"_LogVol2", 0, 0, fStepLimit, false);
   G4LogicalVolume* LogVol3 = new G4LogicalVolume(tmp3, Mat3, Name+"_LogVol3", 0, 0, fStepLimit, false);
   
   ////////////////////////////////////////////////////////////////////
@@ -160,23 +176,48 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
 
   ////////////////////////////////////////////////////////////////////
   //// Physical Volume
-  // 親ボリュームの中心(0,0,0)から見た、Z軸上の相対位置を計算して配置します。
+  // 親ボリュームの中心(0,0,0)から見た、Z軸上の相対位置を計算して配置
   double z_magshield = total_length/2;
   double z_scinti  = z_magshield - offset - thickness_Lig/2;
-  double z_cathode = z_scinti - thickness_Lig/2. - cathode_T_Lig/2.;
-  double z_pmt     = z_cathode - cathode_T_Lig/2. - PMT_L_Lig/2.;
+  double z_pmt     = z_scinti - thickness_Lig/2 - PMT_L_Lig/2;
+
+  //cathodeはPMTに対して配置する (Glassの厚みを1mmと仮定する)
+  double z_cathode = PMT_L_Lig/2 - 1.0*mm - cathode_T_Lig/2 ;
 
 
-  new G4PVPlacement((Move(0,0,z_scinti)),  LogVol0, "Scinti",  LogVol, false, 0, checkOverlaps);
-  new G4PVPlacement(Move(0,0,z_cathode), LogVol1, "Cathode", LogVol, false, 0, checkOverlaps);
-  new G4PVPlacement(Move(0,0,z_pmt),     LogVol2, "PMT",     LogVol, false, 0, checkOverlaps);
+  G4VPhysicalVolume* phys0 = new G4PVPlacement((Move(0,0,z_scinti)),  LogVol0, "Scinti",  LogVol, false, 0, checkOverlaps);
+  G4VPhysicalVolume* phys2  = new G4PVPlacement(Move(0,0,z_pmt),     LogVol2, "PMT",     LogVol, false, 0, checkOverlaps);
 
-  // 磁気シールドをY軸周りに180度回転させて、先端が前、後端が後ろを向くように被せます
+  //cathodeはPMTに対して配置する
+  G4VPhysicalVolume* phys1 = new G4PVPlacement(Move(0,0,z_cathode), LogVol1, "Cathode", LogVol2, false, 0, checkOverlaps); 
+
+  // 磁気シールドをY軸周りに180度回転させて、先端が前、後端が後ろを向くように被せる
   G4RotationMatrix* rotMagShield = new G4RotationMatrix();
   rotMagShield->rotateY(180.*deg);
-  new G4PVPlacement(rotMagShield, G4ThreeVector(0,0,z_magshield), LogVol3, "MagShield", LogVol, false, 0, checkOverlaps);
+  G4VPhysicalVolume* phys3 =new G4PVPlacement(rotMagShield, G4ThreeVector(0,0,z_magshield), LogVol3, "MagShield", LogVol, false, 0, checkOverlaps);
     
   //if(logmode) G4cout << "== LigLogVol::LigLogVol(G4String)\n";
+
+  ////////////////////////////////////////////////////////////////////
+  //Optical Surface
+  //ひとまず鏡面反射だけとする
+
+  G4OpticalSurface* surfCathode = (new CathodeSurface())->GetSurface();
+  G4OpticalSurface* surfDiel = (new DielectricSurface())->GetSurface();
+  G4OpticalSurface* surfMirror = (new MirrorSurface())->GetSurface(); //鏡面反射
+  //G4OpticalSurface* surfDiffuse = (new DiffuseSurface())->GetSurface(); //乱反射
+  
+
+  //[SkinSurface] 全体コーティング
+  new G4LogicalSkinSurface("ScintiSkin", LogVol0, surfMirror);
+  new G4LogicalSkinSurface("CathodeSkin", LogVol1, surfCathode);
+
+  //[BorderSurface] 接合面の上書き
+  // Scinti ⇄ PMTガラス間の光も「グリス」で上書き（双方向）
+  new G4LogicalBorderSurface("ScintiToPMT", phys0, phys2, surfDiel);
+  new G4LogicalBorderSurface("PMTToScinti", phys2, phys0, surfDiel);
+
+  
 }
 
 LigLogVol::~LigLogVol() 

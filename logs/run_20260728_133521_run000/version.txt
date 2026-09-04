@@ -1,0 +1,10 @@
+GIT_COMMIT=9a274da8be191f5a6ae88b0ba19043235fc3cfee
+GIT_BRANCH=main
+
+[git status --short]
+ M macros/run.mac
+ M src/PhysicsList.cc
+ M src/RunConfig.cc
+?? Inspect/
+?? logs/run_20260728_133118_run000/
+?? logs/run_20260728_133521_run000/

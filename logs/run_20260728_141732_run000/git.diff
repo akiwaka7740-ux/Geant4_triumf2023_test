@@ -1,0 +1,129 @@
+diff --git a/analysis/PlotFigure.C b/analysis/PlotFigure.C
+index 00b0cdd..367d7ce 100644
+--- a/analysis/PlotFigure.C
++++ b/analysis/PlotFigure.C
+@@ -14,12 +14,65 @@ TString MakePdfPath(TString filename){
+     return "logs/" + base + "/" + "results.pdf";
+ }
+ 
++bool CanWritePdf(const TString& pdfPath)
++{
++    const TString outputDirectory = gSystem->DirName(pdfPath);
++
++    // AccessPathName() はアクセスできない場合に true を返す
++    if (gSystem->AccessPathName(outputDirectory, kFileExists)) {
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリが存在しません: "
++            << outputDirectory.Data()
++            << "\nCurrent working directory: "
++            << gSystem->WorkingDirectory()
++            << '\n';
++
++        return false;
++    }
++
++    // ディレクトリでは、書き込み権限と実行（検索）権限の両方が必要
++    if (gSystem->AccessPathName(outputDirectory, kWritePermission) ||
++        gSystem->AccessPathName(outputDirectory, kExecutePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: PDF出力ディレクトリに書き込めません: "
++            << outputDirectory.Data()
++            << '\n';
++
++        return false;
++    }
++
++    // 既存のPDFを上書きできるか確認
++    const bool pdfAlreadyExists =
++        !gSystem->AccessPathName(pdfPath, kFileExists);
++
++    if (pdfAlreadyExists &&
++        gSystem->AccessPathName(pdfPath, kWritePermission)) {
++
++        std::cerr
++            << "[PlotFigure] Error: 既存のPDFを上書きできません: "
++            << pdfPath.Data()
++            << '\n';
++
++        return false;
++    }
++
++    return true;
++}
++
+ std::vector<ROOT::RDF::RResultPtr<TH1D>> gHistograms1D;
+ std::vector<ROOT::RDF::RResultPtr<TH2D>> gHistograms2D;
+ std::vector<ROOT::RDF::RResultPtr<TH3D>> gHistograms3D;
+ 
+ 
+ void PlotFigure(TString filename){
++
++    //出力ディレクトリが存在するかを確認
++    TString pdfPath = MakePdfPath(filename);
++    if(!CanWritePdf(pdfPath)){
++        return;
++    }   
++
+     ROOT::RDataFrame df("tree",filename);
+ 
+     auto selected = df
+@@ -147,7 +200,7 @@ void PlotFigure(TString filename){
+     auto report = selected.Report();
+     report->Print();
+ 
+-    TString pdfPath = MakePdfPath(filename);
++
+ 
+     TCanvas *c1 = new TCanvas("c1","c1", 800, 600);
+     hScintiEdep->Draw();
+diff --git a/macros/run.mac b/macros/run.mac
+index 1294dd0..6527a1b 100644
+--- a/macros/run.mac
++++ b/macros/run.mac
+@@ -1,5 +1,5 @@
+ # run.mac の内容
+ /run/initialize
+ /mygen/sourceType neutron
+-/run/printProgress 1000000
+-/run/beamOn 20000
++/run/printProgress 10000
++/run/beamOn 100000
+diff --git a/src/LogVol/UROKOLogVol.cc b/src/LogVol/UROKOLogVol.cc
+index c33699b..70aadb1 100644
+--- a/src/LogVol/UROKOLogVol.cc
++++ b/src/LogVol/UROKOLogVol.cc
+@@ -217,7 +217,7 @@ UROKOLogVol::UROKOLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOv
+   //[BorderSurface] 接合面の上書き
+   // ①【前面】シンチからバンパーへ進む光だけ、鏡面スキンを「乱反射」で上書き
+   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfDiffuse);
+-  new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
++  //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfBC620);
+   
+   //new G4LogicalBorderSurface("ScintiToBumper", physScinti, physBumper, surfTybek);
+ 
+diff --git a/src/PhysicsList.cc b/src/PhysicsList.cc
+index 8322942..eecc01b 100644
+--- a/src/PhysicsList.cc
++++ b/src/PhysicsList.cc
+@@ -7,7 +7,7 @@ PhysicsList::PhysicsList(): FTFP_BERT_HP() //親クラスのコンストラク
+ {
+     RegisterPhysics(new G4RadioactiveDecayPhysics());
+     //RegisterPhysics(new G4DecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
+-    RegisterPhysics(new G4EmLivermorePhysics());
++    ReplacePhysics(new G4EmLivermorePhysics()); //すでに登録されているEMstandardと交換する
+     RegisterPhysics(new G4OpticalPhysics());
+ }
+ 
+diff --git a/src/RunConfig.cc b/src/RunConfig.cc
+index 6250c3e..8902d7d 100644
+--- a/src/RunConfig.cc
++++ b/src/RunConfig.cc
+@@ -21,6 +21,7 @@ void RunConfig::SetSourceType(const G4String& sourceType)
+     }
+     */
+ 
++    
+     if (sourceType == "neutron") {
+         fParticleName = "neutron";
+         fEnergy = 1.00 * MeV;

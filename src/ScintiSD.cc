@@ -1,50 +1,70 @@
 #include "ScintiSD.hh"
 
 #include "G4OpticalPhoton.hh"
-#include "G4EventManager.hh"
 #include "G4EmSaturation.hh"
 #include "G4LossTableManager.hh"
 #include "G4Neutron.hh"
 #include "G4VProcess.hh"
 #include "G4ProcessType.hh"
 
-#include "EventAction.hh"
-#include "AnalysisOutput.hh"
 
-
+namespace {
+    //CathodeSD.ccと異なるので注意
+    constexpr G4int kDetectorDepth = 1;
+}
 
 ScintiSD::ScintiSD(G4String name)
- : G4VSensitiveDetector(name),
-   fTotalEdep(0.0),
-   fTotalEvis(0.0),
-   fGeneratedPhotons(0.0),
-   fFirstHitTime(-1.0),
-   fFirstHitPosGlobal(-99999.0, -99999.0, -99999.0), 
-   fFirstHitPosLocal(-99999.0, -99999.0, -99999.0),
-   fNeutronInteractionCount(0)
+ : G4VSensitiveDetector(name)
 {
 }
 
 
 
 void ScintiSD::Initialize(G4HCofThisEvent*) {
-    fTotalEdep = 0.0;
-    fTotalEvis = 0.0;
-    fGeneratedPhotons = 0.0;
-    fFirstHitTime = -1.0;
-    fFirstHitPosGlobal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
-    fFirstHitPosLocal = G4ThreeVector(-99999.0, -99999.0, -99999.0);
-    fNeutronInteractionCount = 0;
+    fScintiData.clear();
 }
 
 G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
 
-    auto* track = step->GetTrack();
-    auto* prePoint = step->GetPreStepPoint();
-    auto* postPoint = step->GetPostStepPoint();
+    // 1. G4Stepと関連オブジェクトを取得
+    if (step == nullptr) {
+        return false;
+    }
 
-    const G4VProcess* process =
-        postPoint->GetProcessDefinedStep();
+    const auto* track = step->GetTrack();
+    const auto* prePoint = step->GetPreStepPoint();
+    const auto* postPoint = step->GetPostStepPoint();
+
+    if (track == nullptr
+        || prePoint == nullptr
+        || postPoint == nullptr) {
+        return false;
+    }
+
+    // 2. このstepが発生した検出器を識別
+    const auto* touchable = prePoint->GetTouchable();
+
+    if (touchable == nullptr) {
+        return false;
+    }
+
+    if (touchable->GetHistoryDepth() < kDetectorDepth) {
+        return false;
+    }
+
+    const G4int detectorCopyNo =touchable->GetCopyNumber(kDetectorDepth);
+
+    if (detectorCopyNo < 0) {
+        return false;
+    }
+
+    const DetectorKey detectorKey{detectorCopyNo};
+
+    // 3. 対象検出器のイベントデータを取得
+    ScintiEventData& data = fScintiData[detectorKey];
+
+    // 4.　一次中性子のhadronic反応を判定
+    const G4VProcess* process = postPoint->GetProcessDefinedStep();
 
     const G4bool isNeutron =
         track->GetDefinition()
@@ -61,24 +81,20 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
     if (isPrimaryNeutron && isHadronicInteraction) {
 
         // 最初の中性子hadronic反応位置
-        if (fNeutronInteractionCount == 0) {
-            // preとpostの中点を反応点とする
-            fFirstHitPosGlobal = postPoint->GetPosition();
-            fFirstHitTime = postPoint->GetGlobalTime();
+        if (data.neutronInteractionCount == 0) {
+            data.firstHitPosGlobal = postPoint->GetPosition();
+            data.firstHitTime= postPoint->GetGlobalTime();
                 
-            auto touchable =
-                prePoint->GetTouchable();
-
             const G4AffineTransform& transform =
                 touchable->GetHistory()->GetTopTransform();
 
-            fFirstHitPosLocal =
+            data.firstHitPosLocal =
                 transform.TransformPoint(
-                    fFirstHitPosGlobal
+                    data.firstHitPosGlobal
                 );
         }
 
-        ++fNeutronInteractionCount;
+        ++data.neutronInteractionCount;
     }
 
 
@@ -96,8 +112,8 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
     const G4double evis =
         saturation->VisibleEnergyDepositionAtAStep(step);
 
-    fTotalEdep += edep;
-    fTotalEvis += evis;
+    data.totalEdep += edep;
+    data.totalEvis += evis;
 
     // Scintillation光の取得
     const auto* secondaries =
@@ -113,7 +129,7 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
                 && creator
                 && creator->GetProcessName()
                     == "Scintillation") {
-                ++fGeneratedPhotons;
+                ++data.generatedPhotons;
             }
         }
     }
@@ -121,17 +137,16 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
     return true;
 }
 
+const ScintiEventData* ScintiSD::FindScintiData(const DetectorKey& detectorKey) const{
+
+    const auto iter = fScintiData.find(detectorKey);
+
+    if (iter == fScintiData.end()){
+        return nullptr;
+    }
+
+    return &(iter->second);
+}
+
 void ScintiSD::EndOfEvent(G4HCofThisEvent*) {
-
-     auto eventAction =
-        static_cast<EventAction*>(
-            G4EventManager::GetEventManager()->GetUserEventAction()
-        );
-
-    if(!eventAction) return;
-
-    auto output = eventAction->GetAnalysisOutput();
-    if(!output) return;
-
-    output->FillScinti(fTotalEdep, fTotalEvis, fGeneratedPhotons, fFirstHitTime, fNeutronInteractionCount);
 }

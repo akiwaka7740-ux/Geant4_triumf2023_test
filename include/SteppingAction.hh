@@ -5,6 +5,8 @@
 #include "G4Step.hh"
 #include "G4Track.hh"
 
+class G4OpBoundaryProcess;
+
 class SteppingAction : public G4UserSteppingAction {
 public:
     SteppingAction();
@@ -12,6 +14,10 @@ public:
 
     // ステップが発生するたびにGeant4カーネルから自動で呼ばれる関数
     void UserSteppingAction(const G4Step* step) override;
+
+private:
+    G4OpBoundaryProcess* fBoundary = nullptr;
+    
 };
 
 #endif

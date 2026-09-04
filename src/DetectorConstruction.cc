@@ -55,8 +55,8 @@ std::map<G4String, EnableAndID> Mode = {
 //テスト用
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
-  {"LigGlass",  { false,    1,    1 } },
-  {"UROKO",     { true,   10,    1 } },
+  {"LigGlass",  { true,    1,    1 } },
+  {"UROKO",     { false,   10,    1 } },
   {"HILE",      { false,   20,    1 } },
   {"HPGe",      { false,   30,    7 } },
   {"BetaPlastic", { false,   40,    1 } },
@@ -119,11 +119,13 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4LogicalVolume* Lig_LogVol = fLig->GetLogicalVolume();
 
     G4double front_Lig = -132.0 * mm;
-    G4double total_length_Lig = (28.5 + 246.0) * mm;
+    G4double length_PMT = 245.0 * mm;
+    G4double length_emptyspace = 28.5 * mm;
+    G4double total_length_Lig = (length_emptyspace + length_PMT) * mm;
     
     G4RotationMatrix rot_Lig;
     rot_Lig.rotateX(-90.0 * deg);
-    G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0), 0.0);
+    G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0) + length_emptyspace, 0.0);
     new G4PVPlacement(G4Transform3D(rot_Lig, pos_Lig), objName+"_Phys", Lig_LogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
   }
 
@@ -172,7 +174,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     //ターゲット検出器間の距離は 1000 mm
     //G4ThreeVector pos_UROKO[1] = { G4ThreeVector(1000*mm, 0, 0) };
 
-    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1500.0*mm, 0, 0) };
+    G4ThreeVector pos_UROKO[] = { G4ThreeVector(1000.0*mm, 0, 0) };
 
     G4RotationMatrix rot_UROKO[1];
     rot_UROKO[0].rotateY(90.0*deg);
@@ -448,16 +450,22 @@ void DetectorConstruction::ConstructSDandField()
 
 
   //注意：現状のコードでは各検出器を一台ずつテストすることしか想定していない
-  
   if( Mode["LigGlass"].Enable && fLig ) {
-    //fLig->GetScintiVolume()->SetSensitiveDetector(sensDet);
+    fLig->GetScintiVolume()->SetSensitiveDetector(scintiSD);
+    fLig->GetCathodeVolume()->SetSensitiveDetector(cathodeSD); 
+    const DetectorKey detectorKey{Mode["LigGlass"].ID};
+    cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // LigGlassのCathodeは1つしかないので、PMT番号は0で固定
   }
   
   if( Mode["UROKO"].Enable && fUROKO ) {
     fUROKO->GetScintiVolume()->SetSensitiveDetector(scintiSD);
-    //fUROKO->GetGuideVolume()->SetSensitiveDetector(cathodeSD);
-    fUROKO->GetPMTVolume()->SetSensitiveDetector(cathodeSD);
-    //fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
+    fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
+
+    for (G4int i = 0; i < Mode["UROKO"].nObj; ++i) {
+      const DetectorKey detectorKey{Mode["UROKO"].ID + i};
+      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
+      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 1}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
+    }
   }
 
   if( Mode["HILE"].Enable && fHile ) {

@@ -1,65 +1,102 @@
 #include "EventAction.hh"
-#include "G4AnalysisManager.hh"
-#include "G4SDManager.hh"
 #include "ScintiSD.hh"
 #include "CathodeSD.hh"
-
 #include "AnalysisOutput.hh"
 
+#include "G4Event.hh"
+#include "G4Run.hh"
+#include "G4RunManager.hh"
+#include "G4SDManager.hh"
 
-void EventAction::BeginOfEventAction(const G4Event*) {
-    for (int i = 0; i < 2; i++) {
-        fHitTimeList[i].clear();
-        fHitPosXList[i].clear();
-        fHitPosYList[i].clear();
-        fHitPosZList[i].clear();
-    }
+#include <map>
 
-    fScintiPosGlobal.clear();
-    fScintiPosLocal.clear();
-    fRadius = -99999.0;
-    fEff[0] = 0.0;
-    fEff[1] = 0.0;
+namespace {
+    struct PmtTotals {
+        G4int sumArrivedPhotons = 0;
+        G4int sumDetectedPhotons = 0;
+    };
 }
 
-void EventAction::EndOfEventAction(const G4Event*) {
+void EventAction::BeginOfEventAction(const G4Event*) {
+   //初期化はSD自身が担当
+}
 
-    //Event毎にデータを確定させる
-    auto analysisManager = G4AnalysisManager::Instance();
+void EventAction::EndOfEventAction(const G4Event* event) {
 
-    auto sdManager = G4SDManager::GetSDMpointer();
+    if (event == nullptr || fAnalysisOutput == nullptr) {
+        return;
+    }
 
-    //efficiencyの計算
-    auto scintiSD = static_cast<ScintiSD*>(sdManager->FindSensitiveDetector("ScintiSD"));
-    auto cathodeSD = static_cast<CathodeSD*>(sdManager->FindSensitiveDetector("CathodeSD"));
+    auto* sdManager = G4SDManager::GetSDMpointer();
 
-    if (scintiSD && cathodeSD) {
+    auto scintiSD = dynamic_cast<ScintiSD*>(sdManager->FindSensitiveDetector("ScintiSD"));
+    auto cathodeSD = dynamic_cast<CathodeSD*>(sdManager->FindSensitiveDetector("CathodeSD"));
 
-        G4double generatedPhotons = scintiSD->GetGeneratedPhotons();
-        G4double pmt1Photons = cathodeSD->GetArrivedPhotons(0);
-        G4double pmt2Photons = cathodeSD->GetArrivedPhotons(1);
+    if (scintiSD == nullptr || cathodeSD == nullptr) {
+        return;
+    }
 
-        if (generatedPhotons > 0) {
-            fEff[0] = pmt1Photons / generatedPhotons;
-            fEff[1] = pmt2Photons / generatedPhotons;
-        } else {
-            fEff[0] = 0.0;
-            fEff[1] = 0.0;
+    const G4int eventId = event->GetEventID();
+    G4int runId = -1;
+
+    const auto* currentRun = G4RunManager::GetRunManager()->GetCurrentRun();
+
+    if (currentRun != nullptr) {
+        runId = currentRun->GetRunID();
+    }
+
+    const auto& pmtDataMap = cathodeSD->GetPmtData();
+
+    // PMTごとの到達光子数と検出光子数の合計を計算
+    std::map<DetectorKey, PmtTotals> totalsByDetector;
+
+    for (const auto& [channelKey, pmtData] : pmtDataMap) {
+        auto& totals = totalsByDetector[channelKey.detector];
+        totals.sumArrivedPhotons += pmtData.arrivedPhotons;
+        totals.sumDetectedPhotons += pmtData.detectedPhotons;
+    }
+
+    // Scintiデータが存在しない場合に使う初期値？？？　
+    const ScintiEventData emptyScintiData;
+
+
+    //1 PMTchannelにつき１行出力する
+    for (const auto& [channelKey, pmtData] : pmtDataMap) {
+        
+        const ScintiEventData* foundScintiData = scintiSD->FindScintiData(channelKey.detector);
+
+        const ScintiEventData& scintiData = foundScintiData ? *foundScintiData : emptyScintiData;
+
+        const PmtTotals& totals = totalsByDetector.at(channelKey.detector);
+
+        G4double arrivalEfficiency = 0.0;
+        G4double detectionEfficiency = 0.0;
+        G4double sumArrivalEfficiency = 0.0;
+        G4double sumDetectionEfficiency = 0.0;
+
+        if (scintiData.generatedPhotons > 0) {
+            arrivalEfficiency = static_cast<G4double>(pmtData.arrivedPhotons) / scintiData.generatedPhotons;
+            detectionEfficiency = static_cast<G4double>(pmtData.detectedPhotons) / scintiData.generatedPhotons;
+
+            sumArrivalEfficiency = static_cast<G4double>(totals.sumArrivedPhotons) / scintiData.generatedPhotons;
+            sumDetectionEfficiency = static_cast<G4double>(totals.sumDetectedPhotons) / scintiData.generatedPhotons;
+
         }
 
-        G4ThreeVector posG = scintiSD->GetFirstHitPosGlobal();
-        fScintiPosGlobal = { posG.x(), posG.y(), posG.z() }; 
+        fAnalysisOutput->FillChannelRow(
+            runId,
+            eventId,
+            channelKey,
+            scintiData,
+            pmtData,
+            totals.sumArrivedPhotons,
+            totals.sumDetectedPhotons,
+            arrivalEfficiency,
+            detectionEfficiency,
+            sumArrivalEfficiency,
+            sumDetectionEfficiency
+        );
 
-        G4ThreeVector posL = scintiSD->GetFirstHitPosLocal();
-        fScintiPosLocal  = { posL.x(), posL.y(), posL.z() };
 
-        // 中心位置からの距離を算出（**重要** 検出器はz方向が奥行きになっている）
-        fRadius = std::sqrt(posL.x() * posL.x() + posL.y() * posL.y());
     }
-
-    if(fAnalysisOutput) {
-        fAnalysisOutput->FillEventSummary(fRadius, fEff[0], fEff[1]);
-        fAnalysisOutput->AddRow();
-    }
-
 }

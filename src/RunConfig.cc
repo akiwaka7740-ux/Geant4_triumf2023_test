@@ -12,15 +12,15 @@ void RunConfig::SetSourceType(const G4String& sourceType)
     fParticlesPerEvent = 1;
     fPosition = G4ThreeVector(0., 0., 0.);
 
-    /*
+    
     if (sourceType == "neutron") {
         fParticleName = "neutron";
-        fEnergy = 1.00 * MeV;
+        fEnergy = 0.5 * MeV;
         fEnergyUnitName = "MeV";
         fDirectionMode = DirectionMode::RandomIsotropic;
     }
-    */
-
+    
+    /*
     if (sourceType == "neutron") {
         fParticleName = "neutron";
         fEnergy = 1.00 * MeV;
@@ -28,14 +28,21 @@ void RunConfig::SetSourceType(const G4String& sourceType)
         fFixedDirection = G4ThreeVector(1., 0., 0.);
         fDirectionMode = DirectionMode::Fixed;    
     }
+    */
 
+    else if (sourceType == "electron") {
+        fParticleName = "e-";
+        fEnergy = 50.0 * keV;
+        fEnergyUnitName = "keV";
+        fDirectionMode = DirectionMode::RandomIsotropic;
+    }
 
     else if (sourceType == "gamma") {
         fParticleName = "gamma";
-        fEnergy = 1.00 * MeV;
+        fEnergy =  2.3 * MeV;
         fEnergyUnitName = "MeV";
-        fFixedDirection = G4ThreeVector(1., 0., 0.);
-        fDirectionMode = DirectionMode::Fixed;
+        //fFixedDirection = G4ThreeVector(1., 0., 0.);
+        fDirectionMode = DirectionMode::RandomIsotropic;
     }
     else if (sourceType == "gamma(137Cs)") {
         fParticleName = "gamma";
