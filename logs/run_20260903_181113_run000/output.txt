@@ -1,7 +1,0 @@
-RUN_LABEL=run_20260903_181113_run000
-ROOT_FILE=/home/hashizume/Geant4-project/triumf2023_test/root/run_20260903_181113_run000.root
-LOG_DIR=/home/hashizume/Geant4-project/triumf2023_test/logs/run_20260903_181113_run000
-MACRO_FILE=build/run_gamma.mac
-START_TIME=2026-09-03T18:11:13+09:00
-END_TIME=2026-09-03T18:18:57+09:00
-EXIT_STATUS=0

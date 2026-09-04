@@ -1,5 +1,0 @@
-# run.mac の内容
-/run/initialize
-/mygen/sourceType gamma
-/run/printProgress 1000000
-/run/beamOn 100000000

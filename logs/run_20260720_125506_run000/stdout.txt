@@ -1,1 +1,0 @@
-run_with_log.sh: line 59: ../build/.sim: No such file or directory

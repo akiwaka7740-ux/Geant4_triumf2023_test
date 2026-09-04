@@ -1,7 +1,0 @@
-RUN_LABEL=run_20260809_164042_run000
-ROOT_FILE=/home/hashizume/Geant4-project/triumf2023_test/root/run_20260809_164042_run000.root
-LOG_DIR=/home/hashizume/Geant4-project/triumf2023_test/logs/run_20260809_164042_run000
-MACRO_FILE=build/run_neutron.mac
-START_TIME=2026-08-09T16:40:42+09:00
-END_TIME=2026-08-09T16:42:08+09:00
-EXIT_STATUS=0
