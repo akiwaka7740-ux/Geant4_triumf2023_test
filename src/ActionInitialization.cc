@@ -1,6 +1,7 @@
 #include "ActionInitialization.hh"
 #include "EventAction.hh"
 #include "SteppingAction.hh"
+#include "OpticalPhotonTrackingAction.hh"
 
 
 ActionInitialization::ActionInitialization()
@@ -32,6 +33,9 @@ void ActionInitialization::Build () const
 
     RunAction *runAction = new RunAction(eventAction, fRunConfig);
     SetUserAction(runAction);
+
+    auto *trackingAction = new OpticalPhotonTrackingAction();
+    SetUserAction(trackingAction);
 
     SteppingAction *steppingAction = new SteppingAction();
     SetUserAction(steppingAction);

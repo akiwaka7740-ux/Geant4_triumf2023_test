@@ -5,6 +5,7 @@ LearningMaterial
 Develop_plan
 Inspect
 logs
-
-
-
+.vscode
+AGENTS.md
+.venv/
+.ipynb_checkpoints/

@@ -15,7 +15,16 @@ struct PmtEventData {
     G4int detectedPhotons = 0;
 
     std::vector<G4double> hitTimes;
+    std::vector<G4double> transportTimes;
+    std::vector<G4double> trackLengths;
     std::vector<G4ThreeVector> hitPositions;
+
+    //PMT内に入射した光子に対して数える
+    std::vector<G4int> scintillatorBoundaryCounts;
+    std::vector<G4int> lightGuideBoundaryCounts;
+
+    std::vector<G4int> scintillatorReflectionCounts;
+    std::vector<G4int> lightGuideReflectionCounts;
 };
 
 class G4Track;

@@ -23,7 +23,7 @@ VacuumMat::VacuumMat() {
     //全波長で屈折率 1.00
     AddPropertyFromNm("RINDEX", {
         { 360.0, 1.00 },
-        { 520.0, 1.00 }
+        { 550.0, 1.00 }
     });
 
     fMaterial->SetMaterialPropertiesTable(mpt);

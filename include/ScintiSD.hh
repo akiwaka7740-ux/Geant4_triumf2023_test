@@ -28,6 +28,7 @@ struct ScintiEventData{
     };
 
     G4int neutronInteractionCount = 0;
+    G4int hasNeutronCapture = 0;
 };
 
 

@@ -23,13 +23,13 @@ AcrylicMat::AcrylicMat() {
     //屈折率 (全波長で 1.5)
     AddPropertyFromNm("RINDEX", {
         { 360.0, 1.5 },
-        { 520.0, 1.5 }
+        { 550.0, 1.5 }
     });
 
     //吸収長 (全波長で 2000 mm)
     AddPropertyFromNm("ABSLENGTH", {
         { 360.0, 2000.0 * mm },
-        { 520.0, 2000.0 * mm }
+        { 550.0, 2000.0 * mm }
     });
 
     fMaterial->SetMaterialPropertiesTable(mpt);

@@ -1,4 +1,10 @@
 #include "CathodeSD.hh"
+#include "OpticalPhotonTrackInfo.hh"
+
+#include "G4Track.hh"
+#include "G4SystemOfUnits.hh"
+
+
 
 namespace {
     constexpr G4int kPmtDepth = 1;
@@ -31,7 +37,12 @@ G4bool CathodeSD::ProcessBoundaryHit(const G4Step* aStep){
         return false;
     }
 
+    const auto* track = aStep->GetTrack();
     const auto* postPoint = aStep->GetPostStepPoint();
+
+    if(track == nullptr || postPoint == nullptr){
+        return false;
+    }
 
     //steppingActionでCathodeであることは判定済み
     /*
@@ -81,9 +92,59 @@ G4bool CathodeSD::ProcessBoundaryHit(const G4Step* aStep){
     ++data.arrivedPhotons;
     ++data.detectedPhotons;
 
-    data.hitTimes.push_back(postPoint->GetGlobalTime());
+    data.hitTimes.push_back(postPoint->GetGlobalTime() / ns); // ns単位に変換
+    data.transportTimes.push_back(track->GetLocalTime() / ns); // ns単位に変換
+    data.trackLengths.push_back(track->GetTrackLength() / mm); // mm単位に変換
+    data.hitPositions.push_back(postPoint->GetPosition() /mm); // mm単位に変換
 
-    data.hitPositions.push_back(postPoint->GetPosition());
+    /*
+     * OpticalPhotonTrackInfoの読み出し
+     *
+     * TrackingActionで正しくTrackInfoが登録されていれば、
+     * すべて0以上の値になる。
+     *
+     * -1はTrackInfoが取得できなかった場合の異常値。
+     */
+    G4int scintillatorBoundaryCount = -1;
+    G4int lightGuideBoundaryCount = -1;
+
+    G4int scintillatorReflectionCount = -1;
+    G4int lightGuideReflectionCount = -1;
+
+    const auto* trackInfo = dynamic_cast<const OpticalPhotonTrackInfo*>(
+        track->GetUserInformation()
+    );
+
+    if (trackInfo != nullptr) {
+        scintillatorBoundaryCount = 
+            trackInfo->GetScintillatorBoundaryCount();
+
+        lightGuideBoundaryCount =
+            trackInfo->GetLightGuideBoundaryCount();
+
+        scintillatorReflectionCount =
+            trackInfo->GetScintillatorReflectionCount();
+
+        lightGuideReflectionCount =
+            trackInfo->GetLightGuideReflectionCount();
+    }
+
+
+    data.scintillatorBoundaryCounts.push_back(
+        scintillatorBoundaryCount
+    );
+
+    data.lightGuideBoundaryCounts.push_back(
+        lightGuideBoundaryCount
+    );
+
+    data.scintillatorReflectionCounts.push_back(
+        scintillatorReflectionCount
+    );
+
+    data.lightGuideReflectionCounts.push_back(
+        lightGuideReflectionCount
+    );
 
     //光子は全て吸収されるものとする
     //aStep->GetTrack()->SetTrackStatus(fStopAndKill);

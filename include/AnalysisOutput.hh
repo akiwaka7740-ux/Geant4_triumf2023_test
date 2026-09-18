@@ -39,10 +39,12 @@ private:
     G4int fPmtCopyNo = -1;
     G4int fIsDetectorRepresentative = -1;
 
+
     G4int fScintiEdep = -1;
     G4int fScintiEvis = -1;
     G4int fGeneratedPhotons = -1;
     G4int fNeutronInteractionCount = -1;
+    G4int fHasNeutronCapture = -1;
     G4int fFirstHitTime = -1;
 
     G4int fFirstHitGlobalX = -1;
@@ -66,9 +68,17 @@ private:
 
     // vector branchが参照する実体
     std::vector<G4double> fHitTimes;
+    std::vector<G4double> fTransportTimes;
+    std::vector<G4double> fTrackLengths;
     std::vector<G4double> fHitPosX;
     std::vector<G4double> fHitPosY;
     std::vector<G4double> fHitPosZ;
+
+    std::vector<G4int> fScintillatorBoundaryCounts;
+    std::vector<G4int> fLightGuideBoundaryCounts;
+
+    std::vector<G4int> fScintillatorReflectionCounts;
+    std::vector<G4int> fLightGuideReflectionCounts;
 };
 
 #endif

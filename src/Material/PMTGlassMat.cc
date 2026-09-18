@@ -26,13 +26,13 @@ PMTGlassMat::PMTGlassMat() {
     //屈折率(値が一定なら、始点と終点のみで良い）
     AddPropertyFromNm("RINDEX", {
         { 360.0, 1.473 },
-        { 520.0, 1.473 }
+        { 550.0, 1.473 }
     });
 
     //吸収長
     AddPropertyFromNm("ABSLENGTH", {
         { 360.0, 100.0 * mm },
-        { 520.0, 100.0 * mm }
+        { 550.0, 100.0 * mm }
     });
 
     fMaterial->SetMaterialPropertiesTable(mpt);

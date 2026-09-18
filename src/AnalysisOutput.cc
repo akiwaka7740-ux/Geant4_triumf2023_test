@@ -73,6 +73,12 @@ void AnalysisOutput::Book()
             "NeutronInteractionCount"
         );
 
+    fHasNeutronCapture =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "HasNeutronCapture"
+        );
+
     fFirstHitTime =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
@@ -177,6 +183,18 @@ void AnalysisOutput::Book()
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
+        "TransportTimes",
+        fTransportTimes
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "TrackLengths",
+        fTrackLengths
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
         "HitPosX",
         fHitPosX
     );
@@ -191,6 +209,30 @@ void AnalysisOutput::Book()
         fNtupleId,
         "HitPosZ",
         fHitPosZ
+    );
+
+    analysisManager->CreateNtupleIColumn(
+    fNtupleId,
+    "ScintillatorBoundaryCounts",
+    fScintillatorBoundaryCounts
+);
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "LightGuideBoundaryCounts",
+        fLightGuideBoundaryCounts
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScintillatorReflectionCounts",
+        fScintillatorReflectionCounts
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "LightGuideReflectionCounts",
+        fLightGuideReflectionCounts
     );
 
     analysisManager->FinishNtuple(
@@ -217,6 +259,8 @@ void AnalysisOutput::FillChannelRow(
 
     // vector branch用バッファ
     fHitTimes = pmtData.hitTimes;
+    fTransportTimes = pmtData.transportTimes;
+    fTrackLengths = pmtData.trackLengths;
 
     fHitPosX.clear();
     fHitPosY.clear();
@@ -238,6 +282,18 @@ void AnalysisOutput::FillChannelRow(
         fHitPosY.push_back(position.y());
         fHitPosZ.push_back(position.z());
     }
+
+    fScintillatorBoundaryCounts =
+        pmtData.scintillatorBoundaryCounts;
+
+    fLightGuideBoundaryCounts =
+        pmtData.lightGuideBoundaryCounts;
+
+    fScintillatorReflectionCounts =
+        pmtData.scintillatorReflectionCounts;
+
+    fLightGuideReflectionCounts =
+        pmtData.lightGuideReflectionCounts;
 
     G4double firstHitRadius = -99999.0;
 
@@ -303,10 +359,16 @@ void AnalysisOutput::FillChannelRow(
         scintiData.neutronInteractionCount
     );
 
+    fillI(
+        fHasNeutronCapture,
+        scintiData.hasNeutronCapture
+    );
+
     fillD(
         fFirstHitTime,
         scintiData.firstHitTime
     );
+
 
     fillD(
         fFirstHitGlobalX,

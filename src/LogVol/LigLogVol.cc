@@ -129,10 +129,10 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
   BC408Mat* fBC408 = new BC408Mat();
 
   auto Mat  = G4NistManager::Instance()->FindOrBuildMaterial("G4_AIR"); // 親空間は空気（Scinti表面とShield先頭までの空間は空気で埋められているはず）
-  //auto Mat0 = fGS20->GetMaterial();
+  auto Mat0 = fGS20->GetMaterial();
 
   //テスト用
-  auto Mat0 = fBC408->GetMaterial();
+  //auto Mat0 = fBC408->GetMaterial();
 
   auto Mat1 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Al");
   auto Mat2 = fPMTGlass->GetMaterial();

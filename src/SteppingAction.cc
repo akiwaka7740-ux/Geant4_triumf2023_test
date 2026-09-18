@@ -14,6 +14,40 @@ SteppingAction::SteppingAction()
 {
 }
 
+OpticalPhotonRegion SteppingAction::ClassifyVolume(
+    const G4VPhysicalVolume* volume
+)
+{
+    if (volume == nullptr) {
+        return OpticalPhotonRegion::Other;
+    }
+
+    const auto* logicalVolume = volume->GetLogicalVolume();
+
+    if (logicalVolume == nullptr) {
+        return OpticalPhotonRegion::Other;
+    }
+
+    const auto& logicalVolumeName = logicalVolume->GetName();
+
+    //UROKOの判定
+    if (logicalVolumeName == "UROKO_LV_Scinti"){
+        return OpticalPhotonRegion::Scintillator;
+    }
+
+    if (logicalVolumeName == "UROKO_LV_Guide"){
+        return OpticalPhotonRegion::LightGuide;
+    }
+
+
+    //LiGlassの判定
+    if (logicalVolumeName == "LigGlass_LogVol0" ){
+        return OpticalPhotonRegion::Scintillator;
+    }
+
+    return OpticalPhotonRegion::Other;
+}
+
 void SteppingAction::UserSteppingAction(const G4Step* step) {
 
     if(step == nullptr){
@@ -55,15 +89,40 @@ void SteppingAction::UserSteppingAction(const G4Step* step) {
         return;
     }
 
+    const auto* prePoint = step->GetPreStepPoint();
     const auto* postPoint = step->GetPostStepPoint();
 
-    // boundary statusは境界stepでのみ有効
-    if (postPoint->GetStepStatus()!= fGeomBoundary) {
+    if (prePoint == nullptr || postPoint == nullptr) {
+        return;
+    }
+
+    //OpticalPhotonStepContext contextを作成して、光学光子のステップ情報をまとめる
+    const auto stepStatus = postPoint->GetStepStatus();
+
+    const auto boundaryStatus =
+        stepStatus == fGeomBoundary
+        ? fBoundary->GetStatus()
+        :NotAtBoundary;
+
+    const OpticalPhotonStepContext context{
+        track,
+        ClassifyVolume(prePoint->GetPhysicalVolume()),
+        ClassifyVolume(postPoint->GetPhysicalVolume()),
+        postPoint->GetProcessDefinedStep(),
+        stepStatus,
+        boundaryStatus
+    };
+
+    fOpticalPhotonStepProcessor.Process(context);
+
+
+    // 以降はCathodeSDのProcessBoundaryHitを呼ぶ処理
+    if (stepStatus!= fGeomBoundary) {
         return;
     }
 
     // 現在EFFICIENCYを持つoptical surfaceはCathodeSurfaceのみ
-    if (fBoundary->GetStatus() != Detection) {
+    if (boundaryStatus != Detection) {
         return;
     }
 

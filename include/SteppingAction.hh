@@ -5,7 +5,11 @@
 #include "G4Step.hh"
 #include "G4Track.hh"
 
+#include "OpticalPhotonStepProcessor.hh"
+
+
 class G4OpBoundaryProcess;
+class G4VPhysicalVolume;
 
 class SteppingAction : public G4UserSteppingAction {
 public:
@@ -16,7 +20,12 @@ public:
     void UserSteppingAction(const G4Step* step) override;
 
 private:
+    static OpticalPhotonRegion ClassifyVolume(
+        const G4VPhysicalVolume* volume
+    );
+
     G4OpBoundaryProcess* fBoundary = nullptr;
+    OpticalPhotonStepProcessor fOpticalPhotonStepProcessor;
     
 };
 

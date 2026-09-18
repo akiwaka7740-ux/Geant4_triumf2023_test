@@ -3,7 +3,6 @@
 #include "G4UIdirectory.hh"       // 【修正】インクルードを追加
 #include "G4UIcmdWithAString.hh"  // 【修正】インクルードを追加
 
-// 【修正】クラス名を Messanger から Messenger に統一
 PrimaryGeneratorMessenger::PrimaryGeneratorMessenger(PrimaryGenerator *action) : fAction(action)
 {
     // コマンドディレクトリの作成

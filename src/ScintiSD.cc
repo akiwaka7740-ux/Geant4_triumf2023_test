@@ -6,7 +6,9 @@
 #include "G4Neutron.hh"
 #include "G4VProcess.hh"
 #include "G4ProcessType.hh"
-
+#include "G4HadronicProcessType.hh"
+#include "G4Alpha.hh"
+#include "G4Triton.hh"
 
 namespace {
     //CathodeSD.ccと異なるので注意
@@ -97,6 +99,35 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
         ++data.neutronInteractionCount;
     }
 
+    // 5. 中性子捕獲を判定
+    const auto* secondaries = step->GetSecondaryInCurrentStep();
+
+    G4bool hasTriton = false;
+    G4bool hasAlpha = false;
+
+    if (secondaries != nullptr) {
+        for (const auto* secondary : *secondaries) {
+            if (secondary->GetDefinition()
+                    == G4Triton::TritonDefinition()) {
+                hasTriton = true;
+            }
+            else if (secondary->GetDefinition()
+                    == G4Alpha::AlphaDefinition()) {
+                hasAlpha = true;
+            }
+        }
+    }
+
+    const G4bool isNeutronInelastic =
+        isNeutron 
+        && process != nullptr
+        && process->GetProcessName() == "neutronInelastic";
+
+    // 中性子捕獲が発生した場合のフラグを設定
+    if (isNeutronInelastic && hasTriton && hasAlpha) {
+        data.hasNeutronCapture = 1;
+    }
+
 
     // 以下はエネルギー付与の処理
     const G4double edep =
@@ -115,9 +146,6 @@ G4bool ScintiSD::ProcessHits(G4Step* step, G4TouchableHistory*){
     data.totalEdep += edep;
     data.totalEvis += evis;
 
-    // Scintillation光の取得
-    const auto* secondaries =
-        step->GetSecondaryInCurrentStep();
 
     if (secondaries) {
         for (const auto* secondary : *secondaries) {
