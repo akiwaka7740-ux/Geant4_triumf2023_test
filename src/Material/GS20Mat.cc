@@ -212,7 +212,7 @@ GS20Mat::GS20Mat() {
 
 
     //　光子の発生数
-    mpt->AddConstProperty("SCINTILLATIONYIELD", 5500.0 /MeV);   //カタログ上はplasticの20~30%(諸説あり)なので、Codexとの相談の上ひとまず5500/MeVとした
+    mpt->AddConstProperty("SCINTILLATIONYIELD", 3250.0 /MeV);   //カタログ上はplasticの20~30%(諸説あり)なので、Codexとの相談の上ひとまず5500/MeVとした
     //　光子発生のばらつき（ポアソン分布）  
     mpt->AddConstProperty("RESOLUTIONSCALE", 1.0); 
     //単一の成分のみと仮定
@@ -221,13 +221,11 @@ GS20Mat::GS20Mat() {
     mpt->AddConstProperty("SCINTILLATIONRISETIME1", 0.0 * ns); 
     
     //クチンチング（消光効果）に関するパラメータ
-    fMaterial->GetIonisation()->SetBirksConstant( (0.021 * mm/MeV) );
+    fMaterial->GetIonisation()->SetBirksConstant( (0.010 * mm/MeV) );
 
     fMaterial->SetMaterialPropertiesTable(mpt);
 
 }
 
 GS20Mat::~GS20Mat() {
-    // 補足: G4MaterialはGeant4のカーネルが内部で一括管理して破棄してくれるため、
-    // ここでわざわざ delete fMaterial; を書く必要はありません。
 }

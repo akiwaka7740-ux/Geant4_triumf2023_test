@@ -30,6 +30,14 @@ void RunConfig::SetSourceType(const G4String& sourceType)
     }
     */
 
+    else if (sourceType == "thermal_neutron"){
+        fParticleName = "neutron";
+        fEnergy = 0.025 * eV;
+        fEnergyUnitName = "eV";
+        //fFixedDirection = G4ThreeVector(0., 0., -1.);
+        fDirectionMode = DirectionMode::RandomIsotropic;
+    }
+
     else if (sourceType == "electron") {
         fParticleName = "e-";
         fEnergy = 50.0 * keV;
