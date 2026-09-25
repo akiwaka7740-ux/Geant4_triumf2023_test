@@ -4,41 +4,71 @@
 #include "OpticalPhotonTrackInfo.hh"
 
 #include "G4OpBoundaryProcess.hh"
-#include "G4StepStatus.hh"
+#include "globals.hh"
 
+#include <memory>
+
+
+class AnalysisConfig;
+class G4Step;
 class G4Track;
-class G4VProcess;
+class G4VPhysicalVolume;
 
-struct OpticalPhotonStepContext {
-    G4Track* track = nullptr;
-
-    OpticalPhotonRegion preRegion =
-        OpticalPhotonRegion::Other;
-
-    OpticalPhotonRegion postRegion =
-        OpticalPhotonRegion::Other;
-
-    const G4VProcess* processDefinedStep = nullptr;
-
-    G4StepStatus stepStatus = fUndefined;
-
-    G4OpBoundaryProcessStatus boundaryStatus =
-        Undefined;
-};
 
 class OpticalPhotonStepProcessor {
 public:
-    OpticalPhotonStepProcessor() = default;
+    explicit OpticalPhotonStepProcessor(
+        std::shared_ptr<const AnalysisConfig> config
+    );
+
     ~OpticalPhotonStepProcessor() = default;
 
     void Process(
-        const OpticalPhotonStepContext& context
-    ) const;
+        const G4Step* step
+    );
+
 
 private:
+    /*
+     * 光学光子に登録されているOpBoundaryプロセスを探す。
+     * 最初に見つけたポインタはfBoundaryへ保持する。
+     */
+    G4OpBoundaryProcess* FindBoundaryProcess(
+        const G4Track* track
+    );
+
+
+    /*
+     * 現在の物理ボリュームを、
+     * シンチレータ、ライトガイド、その他に分類する。
+     */
+    static OpticalPhotonRegion ClassifyVolume(
+        const G4VPhysicalVolume* volume
+    );
+
+
+    /*
+     * OpBoundaryの状態が反射に該当するか判定する。
+     */
     static G4bool IsReflection(
         G4OpBoundaryProcessStatus status
     );
+
+
+    /*
+     * Cathode表面に到達した際に、
+     * PhotocathodeSDへ処理を委譲する → detectionの判定も一緒に渡す
+     */
+    static void ProcessPhotocathodeBoundary(
+        const G4Step* step,
+        G4OpBoundaryProcessStatus boundaryStatus
+    );
+
+
+    std::shared_ptr<const AnalysisConfig>
+        fAnalysisConfig;
+
+    G4OpBoundaryProcess* fBoundary = nullptr;
 };
 
 #endif

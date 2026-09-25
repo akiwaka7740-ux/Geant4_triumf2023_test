@@ -1,15 +1,37 @@
 #include "AnalysisOutput.hh"
-#include "ScintiSD.hh"
-#include "CathodeSD.hh"
+
 #include "DetectorChannelKey.hh"
+#include "IncidentNeutronData.hh"
+#include "PhotocathodeHit.hh"
+#include "ScintillatorHit.hh"
 
 #include "G4AnalysisManager.hh"
+#include "G4Exception.hh"
+#include "G4SystemOfUnits.hh"
 
 #include <cmath>
 
+
+namespace {
+
+/*
+ * ROOTへ書き込む物理量の無効値。
+ *
+ * AnalysisOutput.hh内のColumnIdの初期値-1とは
+ * 意味が異なることに注意する。
+ */
+constexpr G4double kInvalidPosition = -99999.0;
+constexpr G4double kInvalidTime = -99999.0;
+constexpr G4double kInvalidEnergy = -99999.0;
+constexpr G4int kMissingIdentifier = -1;
+
+}
+
+
 void AnalysisOutput::Book()
 {
-    auto* analysisManager = G4AnalysisManager::Instance();
+    auto* analysisManager =
+        G4AnalysisManager::Instance();
 
     analysisManager->SetNtupleMerging(true);
 
@@ -19,203 +41,337 @@ void AnalysisOutput::Book()
             "Detector and PMT channel data"
         );
 
-    fRunId =
+
+    // イベント・チャンネル識別情報
+    fRunIdColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "RunID"
         );
 
-    fEventId =
+    fEventIdColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "EventID"
         );
 
-    fDetectorCopyNo =
+    fDetectorCopyNoColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "DetectorCopyNo"
         );
 
-    fPmtCopyNo =
+    fPmtCopyNoColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "PmtCopyNo"
         );
 
-    fIsDetectorRepresentative =
+    fIsDetectorRepresentativeColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "IsDetectorRepresentative"
         );
 
-    fScintiEdep =
-        analysisManager->CreateNtupleDColumn(
+    fOpticalRecordingModeColumnId =
+        analysisManager->CreateNtupleIColumn(
             fNtupleId,
-            "ScintiEdep"
+            "OpticalRecordingMode"
         );
 
-    fScintiEvis =
-        analysisManager->CreateNtupleDColumn(
+    fNeutronHistoryTargetColumnId =
+        analysisManager->CreateNtupleIColumn(
             fNtupleId,
-            "ScintiEvis"
+            "NeutronHistoryTarget"
         );
 
-    fGeneratedPhotons =
+
+    // シンチレータ応答
+    fScintiEdepColumnId =
         analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "ScintiEdep_MeV"
+        );
+
+    fScintiEvisColumnId =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "ScintiEvis_MeV"
+        );
+
+    fGeneratedPhotonsColumnId =
+        analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "GeneratedPhotons"
         );
 
-    fNeutronInteractionCount =
+    fPrimaryNeutronInteractionCountColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
-            "NeutronInteractionCount"
+            "PrimaryNeutronInteractionCount"
         );
 
-    fHasNeutronCapture =
+    fNeutronLineageInteractionCountColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "NeutronLineageInteractionCount"
+        );
+
+    fHasNeutronCaptureColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "HasNeutronCapture"
         );
 
-    fFirstHitTime =
-        analysisManager->CreateNtupleDColumn(
+
+    // 最初の反応
+    fHasFirstHitColumnId =
+        analysisManager->CreateNtupleIColumn(
             fNtupleId,
-            "FirstHitTime"
+            "HasFirstHit"
         );
 
-    fFirstHitGlobalX =
+    fFirstHitTimeColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitGlobalX"
+            "FirstHitTime_ns"
         );
 
-    fFirstHitGlobalY =
+    fFirstHitGlobalXColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitGlobalY"
+            "FirstHitGlobalX_mm"
         );
 
-    fFirstHitGlobalZ =
+    fFirstHitGlobalYColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitGlobalZ"
+            "FirstHitGlobalY_mm"
         );
 
-    fFirstHitLocalX =
+    fFirstHitGlobalZColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitLocalX"
+            "FirstHitGlobalZ_mm"
         );
 
-    fFirstHitLocalY =
+    fFirstHitLocalXColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitLocalY"
+            "FirstHitLocalX_mm"
         );
 
-    fFirstHitLocalZ =
+    fFirstHitLocalYColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitLocalZ"
+            "FirstHitLocalY_mm"
         );
 
-    fFirstHitRadius =
+    fFirstHitLocalZColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
-            "FirstHitRadius"
+            "FirstHitLocalZ_mm"
         );
 
-    fArrivedPhotons =
+    fFirstHitRadiusColumnId =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "FirstHitRadius_mm"
+        );
+
+
+    // 入射中性子情報
+    fHasIncidentNeutronDataColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "HasIncidentNeutronData"
+        );
+
+    fIncidentNeutronTrackIdColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "IncidentNeutronTrackID"
+        );
+
+    fIncidentNeutronParentTrackIdColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "IncidentNeutronParentTrackID"
+        );
+
+    fIncidentNeutronRootPrimaryTrackIdColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "IncidentNeutronRootPrimaryTrackID"
+        );
+
+    fIncidentDetectorCopyNoColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "IncidentDetectorCopyNo"
+        );
+
+    fDetectorEntryTimeColumnId =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "DetectorEntryTime_ns"
+        );
+
+    fDetectorEntryEnergyColumnId =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "DetectorEntryEnergy_MeV"
+        );
+
+    fPreDetectorScatterCountColumnId =
+        analysisManager->CreateNtupleIColumn(
+            fNtupleId,
+            "PreDetectorScatterCount"
+        );
+
+
+    // 入射前散乱履歴
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScatterTrackIDs",
+        fScatterTrackIds
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScatterParentTrackIDs",
+        fScatterParentTrackIds
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScatterObjectTypes",
+        fScatterObjectTypes
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScatterObjectCopyNos",
+        fScatterObjectCopyNos
+    );
+
+    analysisManager->CreateNtupleIColumn(
+        fNtupleId,
+        "ScatterProcessTypes",
+        fScatterProcessTypes
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "ScatterTimes_ns",
+        fScatterTimes
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "ScatterEnergiesBefore_MeV",
+        fScatterEnergiesBefore
+    );
+
+    analysisManager->CreateNtupleDColumn(
+        fNtupleId,
+        "ScatterEnergiesAfter_MeV",
+        fScatterEnergiesAfter
+    );
+
+
+    // PMT集計情報
+    fArrivedPhotonsColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "ArrivedPhotons"
         );
 
-    fDetectedPhotons =
+    fDetectedPhotonsColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "DetectedPhotons"
         );
 
-    fArrivalEfficiency =
+    fArrivalEfficiencyColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
             "ArrivalEfficiency"
         );
 
-    fDetectionEfficiency =
+    fDetectionEfficiencyColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
             "DetectionEfficiency"
         );
 
-    fSumArrivedPhotons =
+    fSumArrivedPhotonsColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "PmtSumArrivedPhotons"
         );
 
-    fSumDetectedPhotons =
+    fSumDetectedPhotonsColumnId =
         analysisManager->CreateNtupleIColumn(
             fNtupleId,
             "PmtSumDetectedPhotons"
         );
 
-    fSumArrivalEfficiency =
+    fSumArrivalEfficiencyColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
             "PmtSumArrivalEfficiency"
         );
 
-    fSumDetectionEfficiency =
+    fSumDetectionEfficiencyColumnId =
         analysisManager->CreateNtupleDColumn(
             fNtupleId,
             "PmtSumDetectionEfficiency"
         );
 
+
+    // Detailedモードの光学光子情報
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "HitTimes",
+        "HitTimes_ns",
         fHitTimes
     );
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "TransportTimes",
+        "TransportTimes_ns",
         fTransportTimes
     );
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "TrackLengths",
+        "TrackLengths_mm",
         fTrackLengths
     );
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "HitPosX",
+        "HitPosX_mm",
         fHitPosX
     );
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "HitPosY",
+        "HitPosY_mm",
         fHitPosY
     );
 
     analysisManager->CreateNtupleDColumn(
         fNtupleId,
-        "HitPosZ",
+        "HitPosZ_mm",
         fHitPosZ
     );
 
     analysisManager->CreateNtupleIColumn(
-    fNtupleId,
-    "ScintillatorBoundaryCounts",
-    fScintillatorBoundaryCounts
-);
+        fNtupleId,
+        "ScintillatorBoundaryCounts",
+        fScintillatorBoundaryCounts
+    );
 
     analysisManager->CreateNtupleIColumn(
         fNtupleId,
@@ -235,17 +391,21 @@ void AnalysisOutput::Book()
         fLightGuideReflectionCounts
     );
 
+
     analysisManager->FinishNtuple(
         fNtupleId
     );
 }
 
+
 void AnalysisOutput::FillChannelRow(
     G4int runId,
     G4int eventId,
     const PmtChannelKey& channelKey,
-    const ScintiEventData& scintiData,
-    const PmtEventData& pmtData,
+    const ScintillatorHit* scintillatorHit,
+    const PhotocathodeHit& photocathodeHit,
+    OpticalRecordingMode opticalRecordingMode,
+    GeometryObjectType neutronHistoryTarget,
     G4int sumArrivedPhotons,
     G4int sumDetectedPhotons,
     G4double arrivalEfficiency,
@@ -257,190 +417,602 @@ void AnalysisOutput::FillChannelRow(
     auto* analysisManager =
         G4AnalysisManager::Instance();
 
-    // vector branch用バッファ
-    fHitTimes = pmtData.hitTimes;
-    fTransportTimes = pmtData.transportTimes;
-    fTrackLengths = pmtData.trackLengths;
+
+    /*
+     * 各行の初期値。
+     *
+     * ScintillatorHitが存在しない場合でも、
+     * 前の行の値が残らないように毎回初期化する。
+     */
+    G4double scintiEdep = 0.0;
+    G4double scintiEvis = 0.0;
+
+    G4int generatedPhotons = 0;
+
+    G4int primaryNeutronInteractionCount = 0;
+    G4int neutronLineageInteractionCount = 0;
+
+    G4int hasNeutronCapture = 0;
+
+
+    G4int hasFirstHit = 0;
+
+    G4double firstHitTime = kInvalidTime;
+
+    G4double firstHitGlobalX = kInvalidPosition;
+    G4double firstHitGlobalY = kInvalidPosition;
+    G4double firstHitGlobalZ = kInvalidPosition;
+
+    G4double firstHitLocalX = kInvalidPosition;
+    G4double firstHitLocalY = kInvalidPosition;
+    G4double firstHitLocalZ = kInvalidPosition;
+
+    G4double firstHitRadius = kInvalidPosition;
+
+
+    G4int hasIncidentNeutronData = 0;
+
+    G4int incidentNeutronTrackId = kMissingIdentifier;
+    G4int incidentNeutronParentTrackId = kMissingIdentifier;
+    G4int incidentNeutronRootPrimaryTrackId = kMissingIdentifier;
+
+    G4int incidentDetectorCopyNo = kMissingIdentifier;
+
+    G4double detectorEntryTime = kInvalidTime;
+    G4double detectorEntryEnergy = kInvalidEnergy;
+
+    G4int preDetectorScatterCount = 0;
+
+
+    /*
+     * 前のROOT行の散乱履歴が残らないように、
+     * 毎回すべてのvectorを空にする。
+     */
+    fScatterTrackIds.clear();
+    fScatterParentTrackIds.clear();
+
+    fScatterObjectTypes.clear();
+    fScatterObjectCopyNos.clear();
+
+    fScatterProcessTypes.clear();
+
+    fScatterTimes.clear();
+    fScatterEnergiesBefore.clear();
+    fScatterEnergiesAfter.clear();
+
+
+    if (scintillatorHit != nullptr) {
+        scintiEdep =
+            scintillatorHit->GetTotalEdep() / MeV;
+
+        scintiEvis =
+            scintillatorHit->GetTotalEvis() / MeV;
+
+        generatedPhotons =
+            scintillatorHit->GetGeneratedPhotons();
+
+        primaryNeutronInteractionCount =
+            scintillatorHit
+                ->GetPrimaryNeutronInteractionCount();
+
+        neutronLineageInteractionCount =
+            scintillatorHit
+                ->GetNeutronLineageInteractionCount();
+
+        hasNeutronCapture =
+            scintillatorHit->HasNeutronCapture()
+            ? 1
+            : 0;
+
+
+        if (scintillatorHit->HasFirstHit()) {
+            hasFirstHit = 1;
+
+            firstHitTime =
+                scintillatorHit->GetFirstHitTime()
+                / ns;
+
+            const auto& globalPosition =
+                scintillatorHit
+                    ->GetFirstHitPosGlobal();
+
+            firstHitGlobalX =
+                globalPosition.x() / mm;
+
+            firstHitGlobalY =
+                globalPosition.y() / mm;
+
+            firstHitGlobalZ =
+                globalPosition.z() / mm;
+
+
+            const auto& localPosition =
+                scintillatorHit
+                    ->GetFirstHitPosLocal();
+
+            firstHitLocalX =
+                localPosition.x() / mm;
+
+            firstHitLocalY =
+                localPosition.y() / mm;
+
+            firstHitLocalZ =
+                localPosition.z() / mm;
+
+            firstHitRadius =
+                std::sqrt(
+                    firstHitLocalX
+                        * firstHitLocalX
+                    + firstHitLocalY
+                        * firstHitLocalY
+                );
+        }
+
+
+        if (
+            scintillatorHit
+                ->HasIncidentNeutronData()
+        ) {
+            hasIncidentNeutronData = 1;
+
+            const auto& incidentData =
+                scintillatorHit
+                    ->GetIncidentNeutronData();
+
+            incidentNeutronTrackId =
+                incidentData.trackId;
+
+            incidentNeutronParentTrackId =
+                incidentData.parentTrackId;
+
+            incidentNeutronRootPrimaryTrackId =
+                incidentData.rootPrimaryTrackId;
+
+            incidentDetectorCopyNo =
+                incidentData.detectorCopyNo;
+
+            detectorEntryTime =
+                incidentData.detectorEntryTime
+                / ns;
+
+            detectorEntryEnergy =
+                incidentData.detectorEntryEnergy
+                / MeV;
+
+
+            const auto& scatterHistory =
+                incidentData
+                    .preDetectorScatterHistory;
+
+            preDetectorScatterCount =
+                static_cast<G4int>(
+                    scatterHistory.size()
+                );
+
+
+            fScatterTrackIds.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterParentTrackIds.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterObjectTypes.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterObjectCopyNos.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterProcessTypes.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterTimes.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterEnergiesBefore.reserve(
+                scatterHistory.size()
+            );
+
+            fScatterEnergiesAfter.reserve(
+                scatterHistory.size()
+            );
+
+
+            for (const auto& scatter
+                 : scatterHistory) {
+                fScatterTrackIds.push_back(
+                    scatter.trackId
+                );
+
+                fScatterParentTrackIds.push_back(
+                    scatter.parentTrackId
+                );
+
+                fScatterObjectTypes.push_back(
+                    static_cast<G4int>(
+                        scatter.objectType
+                    )
+                );
+
+                fScatterObjectCopyNos.push_back(
+                    scatter.objectCopyNo
+                );
+
+                fScatterProcessTypes.push_back(
+                    static_cast<G4int>(
+                        scatter.process
+                    )
+                );
+
+                fScatterTimes.push_back(
+                    scatter.globalTime / ns
+                );
+
+                fScatterEnergiesBefore.push_back(
+                    scatter.kineticEnergyBefore
+                    / MeV
+                );
+
+                fScatterEnergiesAfter.push_back(
+                    scatter.kineticEnergyAfter
+                    / MeV
+                );
+            }
+        }
+    }
+
+
+    /*
+     * PhotocathodeHit内のDetailed用vectorが
+     * 同じ長さであることを確認する。
+     */
+    if (
+        !photocathodeHit
+            .HasConsistentDetailSizes()
+    ) {
+        G4Exception(
+            "AnalysisOutput::FillChannelRow",
+            "AnalysisOutput001",
+            FatalException,
+            "PhotocathodeHit detail vectors "
+            "have inconsistent sizes."
+        );
+    }
+
+
+    /*
+     * 光学光子詳細情報も、前の行の値を残さないよう
+     * 毎回初期化する。
+     */
+    fHitTimes.clear();
+    fTransportTimes.clear();
+    fTrackLengths.clear();
 
     fHitPosX.clear();
     fHitPosY.clear();
     fHitPosZ.clear();
 
-    fHitPosX.reserve(
-        pmtData.hitPositions.size()
-    );
-    fHitPosY.reserve(
-        pmtData.hitPositions.size()
-    );
-    fHitPosZ.reserve(
-        pmtData.hitPositions.size()
+
+    const auto& hitTimes =
+        photocathodeHit.GetHitTimes();
+
+    const auto& transportTimes =
+        photocathodeHit.GetTransportTimes();
+
+    const auto& trackLengths =
+        photocathodeHit.GetTrackLengths();
+
+    const auto& hitPositions =
+        photocathodeHit.GetHitPositions();
+
+
+    fHitTimes.reserve(hitTimes.size());
+    fTransportTimes.reserve(
+        transportTimes.size()
     );
 
-    for (const auto& position
-         : pmtData.hitPositions) {
-        fHitPosX.push_back(position.x());
-        fHitPosY.push_back(position.y());
-        fHitPosZ.push_back(position.z());
+    fTrackLengths.reserve(
+        trackLengths.size()
+    );
+
+    fHitPosX.reserve(hitPositions.size());
+    fHitPosY.reserve(hitPositions.size());
+    fHitPosZ.reserve(hitPositions.size());
+
+
+    for (const auto value : hitTimes) {
+        fHitTimes.push_back(value / ns);
     }
 
-    fScintillatorBoundaryCounts =
-        pmtData.scintillatorBoundaryCounts;
-
-    fLightGuideBoundaryCounts =
-        pmtData.lightGuideBoundaryCounts;
-
-    fScintillatorReflectionCounts =
-        pmtData.scintillatorReflectionCounts;
-
-    fLightGuideReflectionCounts =
-        pmtData.lightGuideReflectionCounts;
-
-    G4double firstHitRadius = -99999.0;
-
-    if (scintiData.neutronInteractionCount > 0) {
-        firstHitRadius = std::sqrt(
-            scintiData.firstHitPosLocal.x()
-                * scintiData.firstHitPosLocal.x()
-            + scintiData.firstHitPosLocal.y()
-                * scintiData.firstHitPosLocal.y()
+    for (const auto value : transportTimes) {
+        fTransportTimes.push_back(
+            value / ns
         );
     }
 
-    const G4int isRepresentative =
+    for (const auto value : trackLengths) {
+        fTrackLengths.push_back(
+            value / mm
+        );
+    }
+
+    for (const auto& position
+         : hitPositions) {
+        fHitPosX.push_back(
+            position.x() / mm
+        );
+
+        fHitPosY.push_back(
+            position.y() / mm
+        );
+
+        fHitPosZ.push_back(
+            position.z() / mm
+        );
+    }
+
+
+    fScintillatorBoundaryCounts =
+        photocathodeHit
+            .GetScintillatorBoundaryCounts();
+
+    fLightGuideBoundaryCounts =
+        photocathodeHit
+            .GetLightGuideBoundaryCounts();
+
+    fScintillatorReflectionCounts =
+        photocathodeHit
+            .GetScintillatorReflectionCounts();
+
+    fLightGuideReflectionCounts =
+        photocathodeHit
+            .GetLightGuideReflectionCounts();
+
+
+    const G4int isDetectorRepresentative =
         channelKey.pmtCopyNo == 0
         ? 1
         : 0;
 
+
+    /*
+     * scalar列の書き込みを簡潔にするための
+     * ローカル関数。
+     */
     auto fillI =
         [&](G4int columnId, G4int value) {
-            analysisManager->FillNtupleIColumn(
-                fNtupleId,
-                columnId,
-                value
-            );
+            analysisManager
+                ->FillNtupleIColumn(
+                    fNtupleId,
+                    columnId,
+                    value
+                );
         };
 
     auto fillD =
         [&](G4int columnId, G4double value) {
-            analysisManager->FillNtupleDColumn(
-                fNtupleId,
-                columnId,
-                value
-            );
+            analysisManager
+                ->FillNtupleDColumn(
+                    fNtupleId,
+                    columnId,
+                    value
+                );
         };
 
-    fillI(fRunId, runId);
-    fillI(fEventId, eventId);
+
+    // イベント・チャンネル識別情報
+    fillI(
+        fRunIdColumnId,
+        runId
+    );
 
     fillI(
-        fDetectorCopyNo,
+        fEventIdColumnId,
+        eventId
+    );
+
+    fillI(
+        fDetectorCopyNoColumnId,
         channelKey.detector.detectorCopyNo
     );
 
     fillI(
-        fPmtCopyNo,
+        fPmtCopyNoColumnId,
         channelKey.pmtCopyNo
     );
 
     fillI(
-        fIsDetectorRepresentative,
-        isRepresentative
-    );
-
-    fillD(fScintiEdep, scintiData.totalEdep);
-    fillD(fScintiEvis, scintiData.totalEvis);
-    fillD(
-        fGeneratedPhotons,
-        scintiData.generatedPhotons
+        fIsDetectorRepresentativeColumnId,
+        isDetectorRepresentative
     );
 
     fillI(
-        fNeutronInteractionCount,
-        scintiData.neutronInteractionCount
+        fOpticalRecordingModeColumnId,
+        static_cast<G4int>(
+            opticalRecordingMode
+        )
     );
 
     fillI(
-        fHasNeutronCapture,
-        scintiData.hasNeutronCapture
-    );
-
-    fillD(
-        fFirstHitTime,
-        scintiData.firstHitTime
+        fNeutronHistoryTargetColumnId,
+        static_cast<G4int>(
+            neutronHistoryTarget
+        )
     );
 
 
+    // シンチレータ応答
     fillD(
-        fFirstHitGlobalX,
-        scintiData.firstHitPosGlobal.x()
-    );
-    fillD(
-        fFirstHitGlobalY,
-        scintiData.firstHitPosGlobal.y()
-    );
-    fillD(
-        fFirstHitGlobalZ,
-        scintiData.firstHitPosGlobal.z()
+        fScintiEdepColumnId,
+        scintiEdep
     );
 
     fillD(
-        fFirstHitLocalX,
-        scintiData.firstHitPosLocal.x()
+        fScintiEvisColumnId,
+        scintiEvis
     );
-    fillD(
-        fFirstHitLocalY,
-        scintiData.firstHitPosLocal.y()
+
+    fillI(
+        fGeneratedPhotonsColumnId,
+        generatedPhotons
     );
-    fillD(
-        fFirstHitLocalZ,
-        scintiData.firstHitPosLocal.z()
+
+    fillI(
+        fPrimaryNeutronInteractionCountColumnId,
+        primaryNeutronInteractionCount
+    );
+
+    fillI(
+        fNeutronLineageInteractionCountColumnId,
+        neutronLineageInteractionCount
+    );
+
+    fillI(
+        fHasNeutronCaptureColumnId,
+        hasNeutronCapture
+    );
+
+
+    // 最初の反応
+    fillI(
+        fHasFirstHitColumnId,
+        hasFirstHit
     );
 
     fillD(
-        fFirstHitRadius,
+        fFirstHitTimeColumnId,
+        firstHitTime
+    );
+
+    fillD(
+        fFirstHitGlobalXColumnId,
+        firstHitGlobalX
+    );
+
+    fillD(
+        fFirstHitGlobalYColumnId,
+        firstHitGlobalY
+    );
+
+    fillD(
+        fFirstHitGlobalZColumnId,
+        firstHitGlobalZ
+    );
+
+    fillD(
+        fFirstHitLocalXColumnId,
+        firstHitLocalX
+    );
+
+    fillD(
+        fFirstHitLocalYColumnId,
+        firstHitLocalY
+    );
+
+    fillD(
+        fFirstHitLocalZColumnId,
+        firstHitLocalZ
+    );
+
+    fillD(
+        fFirstHitRadiusColumnId,
         firstHitRadius
     );
 
+
+    // 入射中性子情報
     fillI(
-        fArrivedPhotons,
-        pmtData.arrivedPhotons
+        fHasIncidentNeutronDataColumnId,
+        hasIncidentNeutronData
     );
 
     fillI(
-        fDetectedPhotons,
-        pmtData.detectedPhotons
+        fIncidentNeutronTrackIdColumnId,
+        incidentNeutronTrackId
+    );
+
+    fillI(
+        fIncidentNeutronParentTrackIdColumnId,
+        incidentNeutronParentTrackId
+    );
+
+    fillI(
+        fIncidentNeutronRootPrimaryTrackIdColumnId,
+        incidentNeutronRootPrimaryTrackId
+    );
+
+    fillI(
+        fIncidentDetectorCopyNoColumnId,
+        incidentDetectorCopyNo
     );
 
     fillD(
-        fArrivalEfficiency,
+        fDetectorEntryTimeColumnId,
+        detectorEntryTime
+    );
+
+    fillD(
+        fDetectorEntryEnergyColumnId,
+        detectorEntryEnergy
+    );
+
+    fillI(
+        fPreDetectorScatterCountColumnId,
+        preDetectorScatterCount
+    );
+
+
+    // PMT情報
+    fillI(
+        fArrivedPhotonsColumnId,
+        photocathodeHit.GetArrivedPhotons()
+    );
+
+    fillI(
+        fDetectedPhotonsColumnId,
+        photocathodeHit.GetDetectedPhotons()
+    );
+
+    fillD(
+        fArrivalEfficiencyColumnId,
         arrivalEfficiency
     );
 
     fillD(
-        fDetectionEfficiency,
+        fDetectionEfficiencyColumnId,
         detectionEfficiency
     );
 
     fillI(
-        fSumArrivedPhotons,
+        fSumArrivedPhotonsColumnId,
         sumArrivedPhotons
     );
 
     fillI(
-        fSumDetectedPhotons,
+        fSumDetectedPhotonsColumnId,
         sumDetectedPhotons
     );
 
     fillD(
-        fSumArrivalEfficiency,
+        fSumArrivalEfficiencyColumnId,
         sumArrivalEfficiency
     );
 
     fillD(
-        fSumDetectionEfficiency,
+        fSumDetectionEfficiencyColumnId,
         sumDetectionEfficiency
     );
 
+
+    /*
+     * vector branchはAddNtupleRow時点の
+     * バッファ内容がROOTへ保存される。
+     */
     analysisManager->AddNtupleRow(
         fNtupleId
     );

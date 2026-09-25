@@ -103,7 +103,7 @@ flowchart TD
 
 | ファイル | 役割 |
 |---|---|
-| `LigLogVol.cc`、`UROKOLogVol.cc`、`HILELogVol.cc` | 各シンチレータ、ライトガイド、PMT |
+| `LiGlassLogVol.cc`、`UROKOLogVol.cc`、`HILELogVol.cc` | 各シンチレータ、ライトガイド、PMT |
 | `HPGeLogVol.cc`、`BetaPlasticLogVol.cc` | HPGe、β線用検出器 |
 | `MagnetLogVol.cc`、`FrameLogVol.cc` | 磁石・ヨーク、装置フレーム |
 | `FloorLogVol.cc`、`ShieldLogVol.cc` | コンクリート床、鉛遮蔽体 |

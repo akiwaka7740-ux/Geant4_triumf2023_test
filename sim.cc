@@ -3,6 +3,7 @@
 #include <fstream>
 #include <string>
 #include <cstdlib>
+#include <memory>
 
 #include "G4RunManager.hh"
 #include "G4MTRunManager.hh"
@@ -16,6 +17,10 @@
 #include "PhysicsList.hh"
 #include "DetectorConstruction.hh"
 #include "ActionInitialization.hh"
+#include "AnalysisConfig.hh"
+#include "AnalysisMessenger.hh"
+
+
 
 namespace{
 std::string GetEnvString(const char*name)
@@ -102,6 +107,11 @@ int main(int argc, char**argv){
         G4cout << "=== Running in Single thread mode ===" << G4endl;
     #endif 
 
+
+    auto analysisConfig = std::make_shared<AnalysisConfig>();
+    auto analysisMessenger = std::make_unique<AnalysisMessenger>(analysisConfig);
+
+
     //PhysicsList  
     PhysicsList* physicsList = new PhysicsList();
     runManager->SetUserInitialization(physicsList);
@@ -110,11 +120,10 @@ int main(int argc, char**argv){
     G4HadronicParameters::Instance()->SetTimeThresholdForRadioactiveDecay( 1.0e+60*CLHEP::year );
     
     //DetectorConstruction
-    runManager->SetUserInitialization(new DetectorConstruction());
+    runManager->SetUserInitialization(new DetectorConstruction(analysisConfig));
 
     //ActionInitializtion
-    runManager->SetUserInitialization(new ActionInitialization());
-
+    runManager->SetUserInitialization(new ActionInitialization(analysisConfig));
 
     /*
     if (argc == 1)

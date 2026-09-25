@@ -1,52 +1,66 @@
-#ifndef DetectorConstruction_hh
-#define DetectorConstruction_hh 1
+#ifndef DETECTOR_CONSTRUCTION_HH
+#define DETECTOR_CONSTRUCTION_HH
 
 #include "G4VUserDetectorConstruction.hh"
 #include "globals.hh"
 
-class G4VPhysicalVolume;
+#include <memory>
+
+
+class AnalysisConfig;
+
 class G4LogicalVolume;
-class LigLogVol;
+class G4VPhysicalVolume;
+
+class LiGlassLogVol;
 class UROKOLogVol;
 class HILELogVol;
 class HPGeLogVol;
+class BetaPlasticLogVol;
 class MagnetLogVol;
 class FrameLogVol;
 class FloorLogVol;
 class ShieldLogVol;
 class ChamberLogVol;
 class StopperLogVol;
-class BetaPlasticLogVol;
 
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-class DetectorConstruction : public G4VUserDetectorConstruction
-{
-  public:
-    DetectorConstruction();
-    virtual ~DetectorConstruction();
+class DetectorConstruction
+    : public G4VUserDetectorConstruction {
+public:
+    explicit DetectorConstruction(
+        std::shared_ptr<const AnalysisConfig> config
+    );
 
-    virtual G4VPhysicalVolume* Construct();
-    virtual void ConstructSDandField();
+    ~DetectorConstruction() override = default;
 
-  private:
+
+    G4VPhysicalVolume* Construct() override;
+
+    void ConstructSDandField() override;
+
+
+private:
+    std::shared_ptr<const AnalysisConfig>
+        fAnalysisConfig;
+
+
     // 各検出器クラスのインスタンス
-    LigLogVol* fLig;
-    UROKOLogVol* fUROKO;
-    HILELogVol* fHile;
-    HPGeLogVol* fHPGe;
-    BetaPlasticLogVol* fBetaPlastic;
-    MagnetLogVol* fMagnet;
-    FrameLogVol* fFrame;
-    FloorLogVol* fFloor;
-    ShieldLogVol* fShield;
-    ChamberLogVol* fChamber;
-    StopperLogVol* fStopper;
-    
+    LiGlassLogVol* fLiGlass = nullptr;
+    UROKOLogVol* fUROKO = nullptr;
+    HILELogVol* fHile = nullptr;
+    HPGeLogVol* fHPGe = nullptr;
+    BetaPlasticLogVol* fBetaPlastic = nullptr;
+    MagnetLogVol* fMagnet = nullptr;
+    FrameLogVol* fFrame = nullptr;
+    FloorLogVol* fFloor = nullptr;
+    ShieldLogVol* fShield = nullptr;
+    ChamberLogVol* fChamber = nullptr;
+    StopperLogVol* fStopper = nullptr;
 
-    G4LogicalVolume* World_LogVol;
+
+    G4LogicalVolume* fWorldLogicalVolume =
+        nullptr;
 };
-
-//....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
 #endif

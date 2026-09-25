@@ -1,0 +1,6 @@
+/run/initialize
+/analysis/neutronHistoryTarget LiGlass
+/analysis/opticalRecording detailed
+/mygen/sourceType thermal_neutron
+/run/printProgress 100000
+/run/beamOn 1000000

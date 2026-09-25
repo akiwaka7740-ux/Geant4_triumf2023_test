@@ -1,144 +1,69 @@
 #include "SteppingAction.hh"
-#include "CathodeSD.hh"
 
+#include "AnalysisConfig.hh"
+
+#include "G4Neutron.hh"
 #include "G4OpticalPhoton.hh"
-#include "G4SystemOfUnits.hh"
-#include "G4LogicalVolume.hh"
-#include "G4OpBoundaryProcess.hh"
-#include "G4ProcessManager.hh"
-#include "G4VProcess.hh"
-#include "G4VPhysicalVolume.hh"
+#include "G4Step.hh"
+#include "G4Track.hh"
 
-SteppingAction::SteppingAction()
- : G4UserSteppingAction()
+
+SteppingAction::SteppingAction(
+    std::shared_ptr<const AnalysisConfig> config
+)
+    : fNeutronStepProcessor(config),
+      fOpticalPhotonStepProcessor(config)
 {
 }
 
-OpticalPhotonRegion SteppingAction::ClassifyVolume(
-    const G4VPhysicalVolume* volume
+
+void SteppingAction::UserSteppingAction(
+    const G4Step* step
 )
 {
-    if (volume == nullptr) {
-        return OpticalPhotonRegion::Other;
-    }
-
-    const auto* logicalVolume = volume->GetLogicalVolume();
-
-    if (logicalVolume == nullptr) {
-        return OpticalPhotonRegion::Other;
-    }
-
-    const auto& logicalVolumeName = logicalVolume->GetName();
-
-    //UROKOの判定
-    if (logicalVolumeName == "UROKO_LV_Scinti"){
-        return OpticalPhotonRegion::Scintillator;
-    }
-
-    if (logicalVolumeName == "UROKO_LV_Guide"){
-        return OpticalPhotonRegion::LightGuide;
-    }
-
-
-    //LiGlassの判定
-    if (logicalVolumeName == "LigGlass_LogVol0" ){
-        return OpticalPhotonRegion::Scintillator;
-    }
-
-    return OpticalPhotonRegion::Other;
-}
-
-void SteppingAction::UserSteppingAction(const G4Step* step) {
-
-    if(step == nullptr){
-        return ;
-    }
-
-    G4Track* track = step->GetTrack();
-
-    //光学光子であるか判定
-    if(track->GetDefinition() != G4OpticalPhoton::OpticalPhotonDefinition()){
-        return;
-    }
-    
-    //初回のみ判定　
-    if (fBoundary == nullptr){
-        auto* processManager = track->GetDefinition()->GetProcessManager();
-
-        if (processManager == nullptr){
-            return;
-        }
-
-        auto* processList = processManager->GetProcessList();
-
-        const G4int processCount = processManager->GetProcessListLength();
-
-        //全プロセスから境界判定のプロセスのみ引き抜く
-        for (G4int i = 0; i < processCount; i++){
-            auto* process = (*processList)[i];
-
-            if (process != nullptr && process->GetProcessName() == "OpBoundary"){
-                fBoundary = dynamic_cast<G4OpBoundaryProcess*>(process);
-                //境界判定が見つかれば終了
-                break;
-            }
-        }
-    }
-
-    if (fBoundary == nullptr){
+    if (step == nullptr) {
         return;
     }
 
-    const auto* prePoint = step->GetPreStepPoint();
-    const auto* postPoint = step->GetPostStepPoint();
+    const auto* track = step->GetTrack();
 
-    if (prePoint == nullptr || postPoint == nullptr) {
+    if (track == nullptr) {
         return;
     }
 
-    //OpticalPhotonStepContext contextを作成して、光学光子のステップ情報をまとめる
-    const auto stepStatus = postPoint->GetStepStatus();
+    const auto* particle =
+        track->GetDefinition();
 
-    const auto boundaryStatus =
-        stepStatus == fGeomBoundary
-        ? fBoundary->GetStatus()
-        :NotAtBoundary;
-
-    const OpticalPhotonStepContext context{
-        track,
-        ClassifyVolume(prePoint->GetPhysicalVolume()),
-        ClassifyVolume(postPoint->GetPhysicalVolume()),
-        postPoint->GetProcessDefinedStep(),
-        stepStatus,
-        boundaryStatus
-    };
-
-    fOpticalPhotonStepProcessor.Process(context);
-
-
-    // 以降はCathodeSDのProcessBoundaryHitを呼ぶ処理
-    if (stepStatus!= fGeomBoundary) {
+    if (particle == nullptr) {
         return;
     }
 
-    // 現在EFFICIENCYを持つoptical surfaceはCathodeSurfaceのみ
-    if (boundaryStatus != Detection) {
+
+    /*
+     * 中性子のステップ処理
+     */
+    if (particle ==
+        G4Neutron::NeutronDefinition()) {
+
+        fNeutronStepProcessor.Process(step);
         return;
     }
 
-    auto* postVolume = postPoint->GetPhysicalVolume();
 
-    if (postVolume == nullptr) {
+    /*
+     * 光学光子のステップ処理
+     */
+    if (particle ==
+        G4OpticalPhoton::
+            OpticalPhotonDefinition()) {
+
+        fOpticalPhotonStepProcessor.Process(step);
         return;
     }
 
-    auto* sensitiveDetector = postVolume->GetLogicalVolume()->GetSensitiveDetector();
 
-    auto* cathodeSD = dynamic_cast<CathodeSD*>(sensitiveDetector);
-
-    if (cathodeSD == nullptr){
-        return;
-    }
-
-    cathodeSD->ProcessBoundaryHit(step);
+    /*
+     * その他の粒子について、
+     * SteppingActionでは処理を行わない。
+     */
 }

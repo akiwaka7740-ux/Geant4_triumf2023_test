@@ -1,30 +1,48 @@
 #ifndef RUNACTION_HH
 #define RUNACTION_HH
 
-#include "G4UserRunAction.hh"
-#include "G4Run.hh"
-#include "G4AnalysisManager.hh"
-#include "G4SystemOfUnits.hh"
-#include "G4UnitsTable.hh"
 #include "AnalysisOutput.hh"
+
+#include "G4UserRunAction.hh"
 
 
 class EventAction;
-class RunConfig;
+class G4Run;
 
 
-class RunAction : public G4UserRunAction{
-    public:
-        RunAction(EventAction* eventAction, RunConfig* runConfig);
-        ~RunAction();
+class RunAction final : public G4UserRunAction {
+public:
+    /*
+     * workerではEventActionを渡す。
+     * masterではEventActionが存在しないためnullptrを渡す。
+     */
+    explicit RunAction(
+        EventAction* eventAction
+    );
 
-        virtual void BeginOfRunAction(const G4Run *);
-        virtual void EndOfRunAction(const G4Run *);
+    ~RunAction() override = default;
 
-    private:
-        EventAction* fEventAction;
-        AnalysisOutput fAnalysisOutput;
-        RunConfig* fRunConfig;
+
+    void BeginOfRunAction(
+        const G4Run* run
+    ) override;
+
+    void EndOfRunAction(
+        const G4Run* run
+    ) override;
+
+
+private:
+    /*
+     * AnalysisOutputの実体はRunActionが所有する。
+     *
+     * workerでは、この実体への非所有ポインタを
+     * EventActionへ渡す。
+     *
+     * masterではROOT ntupleの定義と
+     * マージ処理のために使用する。
+     */
+    AnalysisOutput fAnalysisOutput;
 };
 
 #endif

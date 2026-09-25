@@ -1,4 +1,4 @@
-#include "LogVol/LigLogVol.hh"
+#include "LogVol/LiGlassLogVol.hh"
 #include "Material/GS20Mat.hh"
 #include "Material/PMTGlassMat.hh"
 #include "Material/BC408Mat.hh"
@@ -68,27 +68,27 @@ namespace {
   }
 };
 
-LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverlaps)
+LiGlassLogVol::LiGlassLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverlaps)
 {
-  //if(logmode) G4cout << "-- LigLogVol::LigLogVol(G4String)\n";
+  //if(logmode) G4cout << "-- LiGlassLogVol::LiGlassLogVol(G4String)\n";
 
   ////////////////////////////////////////////////////////////////////
   //// Solid 
-  double diameter_Lig  = 50.0 * mm;
-  double thickness_Lig = 10.0 * mm;
-  double cathode_W_Lig = 46.0 * mm;
-  double cathode_T_Lig  = 1.0 * mm;
-  double PMT_W_Lig     = 53.0 * mm;
-  double PMT_L_Lig     = 235.0 * mm;
+  double diameterLiGlass = 50.0 * mm;
+  double thicknessLiGlass = 10.0 * mm;
+  double cathodeWidthLiGlass = 46.0 * mm;
+  double cathodeThicknessLiGlass = 1.0 * mm;
+  double pmtWidthLiGlass = 53.0 * mm;
+  double pmtLengthLiGlass = 235.0 * mm;
 
   // 各パーツのSolid作成
-  G4VSolid* tmp0 = new G4Tubs(Name+"_tmp0", 0, diameter_Lig/2., thickness_Lig/2., 0, 2*pi); // Scinti
-  G4VSolid* tmp1 = new G4Tubs(Name+"_tmp1", 0, cathode_W_Lig/2., cathode_T_Lig/2., 0, 2*pi); // Cathode
-  G4VSolid* tmp2 = new G4Tubs(Name+"_tmp2", 0, PMT_W_Lig/2., PMT_L_Lig/2., 0, 2*pi); // PMT
+  G4VSolid* tmp0 = new G4Tubs(Name+"_tmp0", 0, diameterLiGlass/2., thicknessLiGlass/2., 0, 2*pi); // Scinti
+  G4VSolid* tmp1 = new G4Tubs(Name+"_tmp1", 0, cathodeWidthLiGlass/2., cathodeThicknessLiGlass/2., 0, 2*pi); // Cathode
+  G4VSolid* tmp2 = new G4Tubs(Name+"_tmp2", 0, pmtWidthLiGlass/2., pmtLengthLiGlass/2., 0, 2*pi); // PMT
 
   //磁気シールド
-  G4double MagShield_W_Lig = 70.0*mm;
-  G4double MagShield_L_Lig = 202.5*mm;
+  G4double magShieldWidthLiGlass = 70.0*mm;
+  G4double magShieldLengthLiGlass = 202.5*mm;
   
   const G4int numZ_MagShield = 8;
 
@@ -118,8 +118,8 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
 
   // これらを全て包み込む「親ボリューム（Mother Volume）」の作成
   double offset = 28.5*mm; //磁気シールドの表面からシンチレータまでの距離
-  double total_length = offset + thickness_Lig + PMT_L_Lig; // 28.5 + 245 mm
-  double max_radius   = MagShield_W_Lig / 2.; // 最大半径(MagShield)
+  double total_length = offset + thicknessLiGlass + pmtLengthLiGlass; // 28.5 + 245 mm
+  double max_radius   = magShieldWidthLiGlass / 2.; // 最大半径(MagShield)
   Solid = new G4Tubs(Name+"_Solid", 0, max_radius, total_length/2., 0, 2*pi);
 
   ////////////////////////////////////////////////////////////////////
@@ -178,11 +178,11 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
   //// Physical Volume
   // 親ボリュームの中心(0,0,0)から見た、Z軸上の相対位置を計算して配置
   double z_magshield = total_length/2;
-  double z_scinti  = z_magshield - offset - thickness_Lig/2;
-  double z_pmt     = z_scinti - thickness_Lig/2 - PMT_L_Lig/2;
+  double z_scinti  = z_magshield - offset - thicknessLiGlass/2;
+  double z_pmt     = z_scinti - thicknessLiGlass/2 - pmtLengthLiGlass/2;
 
   //cathodeはPMTに対して配置する (Glassの厚みを1mmと仮定する)
-  double z_cathode = PMT_L_Lig/2 - 1.0*mm - cathode_T_Lig/2 ;
+  double z_cathode = pmtLengthLiGlass/2 - 1.0*mm - cathodeThicknessLiGlass/2 ;
 
 
   G4VPhysicalVolume* phys0 = new G4PVPlacement((Move(0,0,z_scinti)),  LogVol0, "Scinti",  LogVol, false, 0, checkOverlaps);
@@ -196,7 +196,7 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
   rotMagShield->rotateY(180.*deg);
   G4VPhysicalVolume* phys3 =new G4PVPlacement(rotMagShield, G4ThreeVector(0,0,z_magshield), LogVol3, "MagShield", LogVol, false, 0, checkOverlaps);
     
-  //if(logmode) G4cout << "== LigLogVol::LigLogVol(G4String)\n";
+  //if(logmode) G4cout << "== LiGlassLogVol::LiGlassLogVol(G4String)\n";
 
   ////////////////////////////////////////////////////////////////////
   //Optical Surface
@@ -220,10 +220,10 @@ LigLogVol::LigLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOverla
   
 }
 
-LigLogVol::~LigLogVol() 
+LiGlassLogVol::~LiGlassLogVol()
 {
-  //if(logmode) G4cout << "-- LigLogVol::~LigLogVol()\n";
+  //if(logmode) G4cout << "-- LiGlassLogVol::~LiGlassLogVol()\n";
   delete Solid;
   delete LogVol;
-  //if(logmode) G4cout << "== LigLogVol::~LigLogVol()\n";
+  //if(logmode) G4cout << "== LiGlassLogVol::~LiGlassLogVol()\n";
 }

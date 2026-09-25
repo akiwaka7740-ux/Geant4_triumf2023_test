@@ -1,5 +1,5 @@
-#ifndef LigLogVol_hh
-#define LigLogVol_hh 1
+#ifndef LiGlassLogVol_hh
+#define LiGlassLogVol_hh 1
 
 #include "globals.hh"
 #include "G4ThreeVector.hh"
@@ -13,7 +13,7 @@ class G4UserLimits;
 
 //....oooOO0OOooo........oooOO0OOooo........oooOO0OOooo........oooOO0OOooo......
 
-class LigLogVol
+class LiGlassLogVol
 {
   private:
     G4VSolid* Solid;
@@ -23,8 +23,8 @@ class LigLogVol
     G4LogicalVolume* LogVol2; // PMT (SD登録用)
 
   public:
-     LigLogVol(G4String Name="Lig", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
-    ~LigLogVol();
+    LiGlassLogVol(G4String Name="LiGlass", G4UserLimits* fStepLimits=0, G4bool checkOverlaps=true);
+    ~LiGlassLogVol();
 
     G4VSolid* GetSolid()         { return Solid;  }
     G4LogicalVolume* GetLogicalVolume() { return LogVol; }

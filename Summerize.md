@@ -54,7 +54,7 @@
 現在のテスト用設定では、以下の状態です。
 
 - `UROKO`: 有効、1 台
-- `LigGlass`: 無効
+- `LiGlass`: 無効
 - `HILE`: 無効
 - `HPGe`: 無効
 - `BetaPlastic`: 無効

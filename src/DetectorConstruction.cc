@@ -1,5 +1,11 @@
 #include "DetectorConstruction.hh"
-#include "LogVol/LigLogVol.hh"
+
+#include "AnalysisConfig.hh"
+#include "GeometryObjectType.hh"
+#include "ScintillatorSD.hh"
+#include "PhotocathodeSD.hh"
+
+#include "LogVol/LiGlassLogVol.hh"
 #include "LogVol/UROKOLogVol.hh"
 #include "LogVol/HILELogVol.hh"
 #include "LogVol/HPGeLogVol.hh"
@@ -11,24 +17,18 @@
 #include "LogVol/ChamberLogVol.hh"
 #include "LogVol/StopperLogVol.hh"
 
-
-
-#include "G4RunManager.hh"
-#include "G4NistManager.hh"
 #include "G4Box.hh"
+#include "G4Exception.hh"
 #include "G4LogicalVolume.hh"
+#include "G4NistManager.hh"
 #include "G4PVPlacement.hh"
+#include "G4RunManager.hh"
+#include "G4SDManager.hh"
 #include "G4SystemOfUnits.hh"
 #include "G4VisAttributes.hh"
-#include "G4SDManager.hh"
-
-#include "SensitiveDetector.hh"
-#include "ScintiSD.hh"
-#include "CathodeSD.hh"
-
-
 
 #include <map>
+#include <utility>
 
 // ======================================================================
 // マスターコントロールパネル (検出器のON/OFFとID管理)
@@ -38,7 +38,7 @@ struct EnableAndID { G4bool Enable; G4int ID, nObj; };
 //本番用
 std::map<G4String, EnableAndID> Mode = {
 //  NAME         ENABLE   ID0   nObj
-  {"LigGlass",  { false,    1,    1 } },
+  {"LiGlass",   { false,    1,    1 } },
   {"UROKO",     { false,   10,    4 } },
   {"HILE",      { false,   20,    6 } },
   {"HPGe",      { false,   30,    7 } },
@@ -54,18 +54,61 @@ std::map<G4String, EnableAndID> Mode = {
 
 //テスト用
 std::map<G4String, EnableAndID> Mode = {
-//  NAME         ENABLE   ID0   nObj
-  {"LigGlass",  { true,    1,    1 } },
-  {"UROKO",     { false,   10,    1 } },
-  {"HILE",      { false,   20,    1 } },
-  {"HPGe",      { false,   30,    7 } },
-  {"BetaPlastic", { false,   40,    1 } },
-  {"Magnet",     { false,   50,    1 } },
-  { "Frame",     { false,   60,    1 } },
-  { "Floor",     { false,   70,    1 } },
-  { "Shield",    { false,   80,    6} },
-  { "Chamber",   { false,   90,    1 } },
-  { "Stopper",   { false,   100,    1 } },
+    {"LiGlass", {
+        true,
+        ObjectBaseId(GeometryObjectType::LiGlass),
+        1
+    }},
+    {"UROKO", {
+        false,
+        ObjectBaseId(GeometryObjectType::UROKO),
+        1
+    }},
+    {"HILE", {
+        false,
+        ObjectBaseId(GeometryObjectType::HILE),
+        1
+    }},
+    {"HPGe", {
+        false,
+        ObjectBaseId(GeometryObjectType::HPGe),
+        7
+    }},
+    {"BetaPlastic", {
+        false,
+        ObjectBaseId(GeometryObjectType::BetaPlastic),
+        1
+    }},
+    {"Magnet", {
+        false,
+        ObjectBaseId(GeometryObjectType::Magnet),
+        1
+    }},
+    {"Frame", {
+        true,
+        ObjectBaseId(GeometryObjectType::Frame),
+        1
+    }},
+    {"Floor", {
+        false,
+        ObjectBaseId(GeometryObjectType::Floor),
+        1
+    }},
+    {"Shield", {
+        false,
+        ObjectBaseId(GeometryObjectType::Shield),
+        6
+    }},
+    {"Chamber", {
+        true,
+        ObjectBaseId(GeometryObjectType::Chamber),
+        1
+    }},
+    {"Stopper", {
+        true,
+        ObjectBaseId(GeometryObjectType::Stopper),
+        1
+    }}
 };
 
 
@@ -82,13 +125,24 @@ namespace {
   }
 }
 
-DetectorConstruction::DetectorConstruction()
-: G4VUserDetectorConstruction(), fLig(nullptr), fUROKO(nullptr), fHile(nullptr), World_LogVol(nullptr)
+DetectorConstruction::DetectorConstruction(
+    std::shared_ptr<const AnalysisConfig> config
+)
+    : G4VUserDetectorConstruction(),
+      fAnalysisConfig(std::move(config))
 {
+    if (fAnalysisConfig == nullptr) {
+        G4Exception(
+            "DetectorConstruction::"
+            "DetectorConstruction",
+            "DetectorConstruction001",
+            FatalException,
+            "AnalysisConfig is null."
+        );
+    }
 }
 
-DetectorConstruction::~DetectorConstruction()
-{}
+
 
 G4VPhysicalVolume* DetectorConstruction::Construct()
 {
@@ -104,29 +158,29 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   // =============================================================
   G4double world_size = 4.0 * m;
   G4Box* World_Solid = new G4Box("World_Solid", world_size/2., world_size/2., world_size/2.);
-  World_LogVol = new G4LogicalVolume(World_Solid, matAir, "World_LogVol");
-  World_LogVol->SetVisAttributes(new G4VisAttributes(TRUE, G4Colour(1.0, 1.0, 1.0, 0.0)));
-  G4VPhysicalVolume* World_PhysVol = new G4PVPlacement(0, G4ThreeVector(), World_LogVol, "World_PhysVol", 0, false, 0, checkOverlaps);
+  fWorldLogicalVolume = new G4LogicalVolume(World_Solid, matAir, "World_LogVol");
+  fWorldLogicalVolume->SetVisAttributes(new G4VisAttributes(TRUE, G4Colour(1.0, 1.0, 1.0, 0.0)));
+  G4VPhysicalVolume* World_PhysVol = new G4PVPlacement(0, G4ThreeVector(), fWorldLogicalVolume, "World_PhysVol", 0, false, 0, checkOverlaps);
 
   G4String objName;
 
   // =============================================================
-  // LigGlass Detector 
+  // LiGlass Detector
   // =============================================================
-  objName = "LigGlass";
+  objName = "LiGlass";
   if( Mode[objName].Enable ) {
-    fLig = new LigLogVol(objName, 0, checkOverlaps);
-    G4LogicalVolume* Lig_LogVol = fLig->GetLogicalVolume();
+    fLiGlass = new LiGlassLogVol(objName, 0, checkOverlaps);
+    G4LogicalVolume* liGlassLogVol = fLiGlass->GetLogicalVolume();
 
-    G4double front_Lig = -132.0 * mm;
+    G4double frontLiGlass = -132.0 * mm;
     G4double length_PMT = 245.0 * mm;
     G4double length_emptyspace = 28.5 * mm;
-    G4double total_length_Lig = (length_emptyspace + length_PMT) * mm;
+    G4double totalLengthLiGlass = (length_emptyspace + length_PMT) * mm;
     
-    G4RotationMatrix rot_Lig;
-    rot_Lig.rotateX(-90.0 * deg);
-    G4ThreeVector pos_Lig(0.0, front_Lig - (total_length_Lig / 2.0) + length_emptyspace, 0.0);
-    new G4PVPlacement(G4Transform3D(rot_Lig, pos_Lig), objName+"_Phys", Lig_LogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
+    G4RotationMatrix rotLiGlass;
+    rotLiGlass.rotateX(-90.0 * deg);
+    G4ThreeVector posLiGlass(0.0, frontLiGlass - (totalLengthLiGlass / 2.0) + length_emptyspace, 0.0);
+    new G4PVPlacement(G4Transform3D(rotLiGlass, posLiGlass), objName+"_Phys", liGlassLogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
   }
 
   // =============================================================
@@ -244,7 +298,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
     // 4. 配置ループ (IDの自動付与)
     for(G4int i=0; i<nObj; i++) {
-      new G4PVPlacement(trans_HILE[i], Hile_LogVol, objName+"_Phys", World_LogVol, false, Mode[objName].ID + i, checkOverlaps);
+      new G4PVPlacement(trans_HILE[i], Hile_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID + i, checkOverlaps);
     }
     */
 
@@ -257,7 +311,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4Transform3D transform_HILE= 
         Rotate(Axis::Z, 12.3/2 * deg) * G4Translate3D((rMin_HILE_Scinti + rMax_HILE_Scinti)/2, 0, 0) * Rotate(Axis::X, 180 * deg);
 
-    new G4PVPlacement(transform_HILE, Hile_LogVol, objName+"_Phys", World_LogVol, false, Mode[objName].ID, checkOverlaps);
+    new G4PVPlacement(transform_HILE, Hile_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
     
   }
 
@@ -341,7 +395,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4LogicalVolume* Mag_LogVol = fMagnet->GetLogicalVolume();
 
     //そのまま配置すればOK
-    new G4PVPlacement(0, G4ThreeVector(0,0,0), Mag_LogVol, objName+"_Phys", World_LogVol, false, Mode[objName].ID, checkOverlaps);
+    new G4PVPlacement(0, G4ThreeVector(0,0,0), Mag_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
 
   }
 
@@ -354,7 +408,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     G4LogicalVolume* BetaPlastic_LogVol = fBetaPlastic->GetLogicalVolume();
 
     //仮としてその場に配置
-    new G4PVPlacement(0, G4ThreeVector(0,0,0), BetaPlastic_LogVol, objName+"_Phys", World_LogVol, false, Mode[objName].ID, checkOverlaps);
+    new G4PVPlacement(0, G4ThreeVector(0,0,0), BetaPlastic_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
   }
 
   ///////////////
@@ -436,40 +490,129 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 }
 
 
+
 void DetectorConstruction::ConstructSDandField()
 {
-  //旧型
-  //SensitiveDetector* sensDet = new SensitiveDetector("SensitiveDetector");
-  //G4SDManager::GetSDMpointer()->AddNewDetector(sensDet);
+    auto* sdManager =
+        G4SDManager::GetSDMpointer();
 
-  ScintiSD* scintiSD = new ScintiSD("ScintiSD");
-  CathodeSD* cathodeSD = new CathodeSD("CathodeSD");
-  
-  G4SDManager::GetSDMpointer()->AddNewDetector(scintiSD);
-  G4SDManager::GetSDMpointer()->AddNewDetector(cathodeSD);
+    if (sdManager == nullptr) {
+        G4Exception(
+            "DetectorConstruction::"
+            "ConstructSDandField",
+            "DetectorConstruction002",
+            FatalException,
+            "G4SDManager is null."
+        );
 
-
-  //注意：現状のコードでは各検出器を一台ずつテストすることしか想定していない
-  if( Mode["LigGlass"].Enable && fLig ) {
-    fLig->GetScintiVolume()->SetSensitiveDetector(scintiSD);
-    fLig->GetCathodeVolume()->SetSensitiveDetector(cathodeSD); 
-    const DetectorKey detectorKey{Mode["LigGlass"].ID};
-    cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // LigGlassのCathodeは1つしかないので、PMT番号は0で固定
-  }
-  
-  if( Mode["UROKO"].Enable && fUROKO ) {
-    fUROKO->GetScintiVolume()->SetSensitiveDetector(scintiSD);
-    fUROKO->GetCathodeVolume()->SetSensitiveDetector(cathodeSD);
-
-    for (G4int i = 0; i < Mode["UROKO"].nObj; ++i) {
-      const DetectorKey detectorKey{Mode["UROKO"].ID + i};
-      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 0}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
-      cathodeSD->RegisterChannel(PmtChannelKey{detectorKey, 1}); // UROKOのPMTは2つあるので、PMT番号は0と1で登録
+        return;
     }
-  }
 
-  if( Mode["HILE"].Enable && fHile ) {
-    //fHile->GetScintiVolume()->SetSensitiveDetector(sensDet);
-    //fHile->GetCathodeVolume()->SetSensitiveDetector(sensDet);
-  }
+
+    auto* scintillatorSD =
+        new ScintillatorSD(
+            "ScintillatorSD",
+            fAnalysisConfig
+        );
+
+    auto* photocathodeSD =
+        new PhotocathodeSD(
+            "PhotocathodeSD",
+            fAnalysisConfig
+        );
+
+
+    sdManager->AddNewDetector(
+        scintillatorSD
+    );
+
+    sdManager->AddNewDetector(
+        photocathodeSD
+    );
+
+
+    /*
+     * LiGlass
+     */
+    if (Mode["LiGlass"].Enable &&
+        fLiGlass != nullptr) {
+
+        fLiGlass
+            ->GetScintiVolume()
+            ->SetSensitiveDetector(
+                scintillatorSD
+            );
+
+        fLiGlass
+            ->GetCathodeVolume()
+            ->SetSensitiveDetector(
+                photocathodeSD
+            );
+
+        const DetectorKey detectorKey{
+            Mode["LiGlass"].ID
+        };
+
+        /*
+         * LiGlassのPMTは1チャンネル。
+         */
+        photocathodeSD->RegisterChannel(
+            PmtChannelKey{
+                detectorKey,
+                0
+            }
+        );
+    }
+
+
+    /*
+     * UROKO
+     */
+    if (Mode["UROKO"].Enable &&
+        fUROKO != nullptr) {
+
+        fUROKO
+            ->GetScintiVolume()
+            ->SetSensitiveDetector(
+                scintillatorSD
+            );
+
+        fUROKO
+            ->GetCathodeVolume()
+            ->SetSensitiveDetector(
+                photocathodeSD
+            );
+
+        for (G4int index = 0;
+             index < Mode["UROKO"].nObj;
+             ++index) {
+
+            const DetectorKey detectorKey{
+                Mode["UROKO"].ID + index
+            };
+
+            /*
+             * UROKOは検出器1台につき
+             * PMTチャンネル0と1を持つ。
+             */
+            photocathodeSD->RegisterChannel(
+                PmtChannelKey{
+                    detectorKey,
+                    0
+                }
+            );
+
+            photocathodeSD->RegisterChannel(
+                PmtChannelKey{
+                    detectorKey,
+                    1
+                }
+            );
+        }
+    }
+
+
+    /*
+     * HILEは現時点では新しい解析出力の対象外。
+     */
 }

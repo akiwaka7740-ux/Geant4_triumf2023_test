@@ -1,58 +1,108 @@
-#include <cstdlib>
-
 #include "RunAction.hh"
+
 #include "EventAction.hh"
+
+#include "G4AnalysisManager.hh"
+#include "G4Run.hh"
+#include "globals.hh"
+
+#include <cstdlib>
+#include <sstream>
 
 
 namespace {
-G4String GetOutputRootFileName(const G4Run* run)
+
+G4String GetOutputRootFileName(
+    const G4Run* run
+)
 {
-    //環境変数が定義されている場合はそれを使用する
-    const char* envOutput = std::getenv("G4_OUTPUT_ROOT");
-    if (envOutput && envOutput[0] != '\0') {
-        return G4String(envOutput);
+    /*
+     * 環境変数が定義されている場合は、
+     * そのファイル名を優先する。
+     */
+    const char* environmentOutput =
+        std::getenv("G4_OUTPUT_ROOT");
+
+    if (
+        environmentOutput != nullptr &&
+        environmentOutput[0] != '\0'
+    ) {
+        return G4String(environmentOutput);
     }
 
-    std::stringstream strRunID;
-    strRunID << run->GetRunID();
-    return "../root/output" + strRunID.str() + ".root";
+
+    std::stringstream runIdStream;
+
+    runIdStream << run->GetRunID();
+
+    return
+        "../root/output"
+        + runIdStream.str()
+        + ".root";
 }
 
 }
 
 
-RunAction::RunAction(EventAction *eventAction, RunConfig* runConfig) : fEventAction(eventAction), fRunConfig(runConfig)
+RunAction::RunAction(
+    EventAction* eventAction
+)
 {
-
+    /*
+     * masterと各workerのAnalysisManagerに
+     * 同一構成のntupleを定義する。
+     */
     fAnalysisOutput.Book();
 
-    // EventActionがSDのmapを結合し、
-    // AnalysisOutputへ1チャンネルずつ渡す
-    // 実態を持っているのはRunActionで、EventActionはAnalysisOutputのポインタを保持するだけ
-    fEventAction->SetAnalysisOutput(&fAnalysisOutput);
+
+    /*
+     * workerの場合だけ、EventActionへ
+     * AnalysisOutputの非所有ポインタを渡す。
+     *
+     * masterにはEventActionが存在しないため、
+     * eventActionはnullptrとなる。
+     */
+    if (eventAction != nullptr) {
+        eventAction->SetAnalysisOutput(
+            &fAnalysisOutput
+        );
+    }
 }
 
-RunAction::~RunAction()
+
+void RunAction::BeginOfRunAction(
+    const G4Run* run
+)
 {
+    if (run == nullptr) {
+        return;
+    }
+
+
+    auto* analysisManager =
+        G4AnalysisManager::Instance();
+
+    analysisManager->OpenFile(
+        GetOutputRootFileName(run)
+    );
 }
 
-void RunAction::BeginOfRunAction(const G4Run *run)
-{
-    G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
-    analysisManager->OpenFile(GetOutputRootFileName(run));
 
-}
-
-void RunAction::EndOfRunAction(const G4Run *run)
+void RunAction::EndOfRunAction(
+    const G4Run* run
+)
 {
-    G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
+    auto* analysisManager =
+        G4AnalysisManager::Instance();
 
     analysisManager->Write();
-
     analysisManager->CloseFile();
 
-    G4int runID = run->GetRunID();
 
-    G4cout << "Finishing run " << runID << G4endl;
+    if (run != nullptr) {
+        G4cout
+            << "Finishing run "
+            << run->GetRunID()
+            << G4endl;
+    }
 }
-

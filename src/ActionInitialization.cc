@@ -1,43 +1,114 @@
 #include "ActionInitialization.hh"
+
+#include "AnalysisConfig.hh"
 #include "EventAction.hh"
+#include "PrimaryGenerator.hh"
+#include "RunAction.hh"
 #include "SteppingAction.hh"
-#include "OpticalPhotonTrackingAction.hh"
+#include "TrackingAction.hh"
+
+#include "G4Exception.hh"
+
+#include <utility>
 
 
-ActionInitialization::ActionInitialization()
+ActionInitialization::ActionInitialization(
+    std::shared_ptr<const AnalysisConfig>
+        analysisConfig
+)
+    : fRunConfig(new RunConfig()),
+      fAnalysisConfig(
+          std::move(analysisConfig)
+      )
 {
-    fRunConfig = new RunConfig();
+    if (fAnalysisConfig == nullptr) {
+        G4Exception(
+            "ActionInitialization::"
+            "ActionInitialization",
+            "ActionInitialization001",
+            FatalException,
+            "AnalysisConfig is null."
+        );
+    }
 }
+
 
 ActionInitialization::~ActionInitialization()
 {
     delete fRunConfig;
 }
 
-void ActionInitialization::BuildForMaster () const
-{
-    EventAction* masterEventAction = new EventAction();
-    RunAction *runAction = new RunAction(masterEventAction,fRunConfig);
-    SetUserAction(runAction);
 
+void ActionInitialization::BuildForMaster() const
+{
+    /*
+     * masterスレッドではイベントを処理しないため、
+     * EventAction、TrackingAction、
+     * SteppingActionは生成しない。
+     *
+     * RunActionはROOT ntupleの定義と、
+     * worker出力のマージに必要。
+     */
+    auto* runAction =
+        new RunAction(nullptr);
+
+    SetUserAction(runAction);
 }
 
 
-void ActionInitialization::Build () const
-{   
-    EventAction* eventAction = new EventAction();
+void ActionInitialization::Build() const
+{
+    /*
+     * workerスレッド用EventAction。
+     *
+     * 光学光子記録モードと中性子履歴対象を
+     * ROOT出力へ渡すため、AnalysisConfigを共有する。
+     */
+    auto* eventAction =
+        new EventAction(fAnalysisConfig);
+
     SetUserAction(eventAction);
 
-    PrimaryGenerator *generator = new PrimaryGenerator(fRunConfig);
+
+    /*
+     * 一次粒子生成。
+     */
+    auto* generator =
+        new PrimaryGenerator(fRunConfig);
+
     SetUserAction(generator);
 
-    RunAction *runAction = new RunAction(eventAction, fRunConfig);
+
+    /*
+     * worker用AnalysisOutputを所有し、
+     * EventActionへ接続する。
+     */
+    auto* runAction =
+        new RunAction(eventAction);
+
     SetUserAction(runAction);
 
-    auto *trackingAction = new OpticalPhotonTrackingAction();
+
+    /*
+     * Track単位の情報管理と、
+     * 二次中性子への履歴継承を担当する。
+     */
+    auto* trackingAction =
+        new TrackingAction(
+            fAnalysisConfig
+        );
+
     SetUserAction(trackingAction);
 
-    SteppingAction *steppingAction = new SteppingAction();
-    SetUserAction(steppingAction);
 
+    /*
+     * Step単位で中性子処理と
+     * 光学光子処理を振り分ける。
+     */
+    auto* steppingAction =
+        new SteppingAction(
+            fAnalysisConfig
+        );
+
+    SetUserAction(steppingAction);
 }

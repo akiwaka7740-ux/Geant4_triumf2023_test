@@ -5,28 +5,39 @@
 #include "G4Step.hh"
 #include "G4Track.hh"
 
+#include "NeutronStepProcessor.hh"
 #include "OpticalPhotonStepProcessor.hh"
 
+#include <memory>
 
-class G4OpBoundaryProcess;
-class G4VPhysicalVolume;
+class AnalysisConfig;
+class G4Step;
 
-class SteppingAction : public G4UserSteppingAction {
+
+class SteppingAction final
+    : public G4UserSteppingAction {
 public:
-    SteppingAction();
-    ~SteppingAction() override = default;
-
-    // ステップが発生するたびにGeant4カーネルから自動で呼ばれる関数
-    void UserSteppingAction(const G4Step* step) override;
-
-private:
-    static OpticalPhotonRegion ClassifyVolume(
-        const G4VPhysicalVolume* volume
+    explicit SteppingAction(
+        std::shared_ptr<const AnalysisConfig> config
     );
 
-    G4OpBoundaryProcess* fBoundary = nullptr;
-    OpticalPhotonStepProcessor fOpticalPhotonStepProcessor;
-    
+    ~SteppingAction() override = default;
+
+    /*
+     * ステップが発生するたびに
+     * Geant4カーネルから呼ばれる。
+     */
+    void UserSteppingAction(
+        const G4Step* step
+    ) override;
+
+
+private:
+    NeutronStepProcessor
+        fNeutronStepProcessor;
+
+    OpticalPhotonStepProcessor
+        fOpticalPhotonStepProcessor;
 };
 
 #endif
