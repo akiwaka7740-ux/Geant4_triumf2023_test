@@ -85,7 +85,7 @@ std::map<G4String, EnableAndID> Mode = {
         1
     }},
     {"Frame", {
-        true,
+        false,
         ObjectBaseId(GeometryObjectType::Frame),
         1
     }},
@@ -100,12 +100,12 @@ std::map<G4String, EnableAndID> Mode = {
         6
     }},
     {"Chamber", {
-        true,
+        false,
         ObjectBaseId(GeometryObjectType::Chamber),
         1
     }},
     {"Stopper", {
-        true,
+        false,
         ObjectBaseId(GeometryObjectType::Stopper),
         1
     }}

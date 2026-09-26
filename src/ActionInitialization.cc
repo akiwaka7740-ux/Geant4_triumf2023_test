@@ -6,6 +6,7 @@
 #include "RunAction.hh"
 #include "SteppingAction.hh"
 #include "TrackingAction.hh"
+#include "OutputConfig.hh"
 
 #include "G4Exception.hh"
 
@@ -13,29 +14,34 @@
 
 
 ActionInitialization::ActionInitialization(
-    std::shared_ptr<const AnalysisConfig>
-        analysisConfig
+    std::shared_ptr<const AnalysisConfig> analysisConfig,
+    std::shared_ptr<const OutputConfig> outputConfig
 )
-    : fRunConfig(new RunConfig()),
-      fAnalysisConfig(
-          std::move(analysisConfig)
-      )
+    : fAnalysisConfig(std::move(analysisConfig)),
+      fOutputConfig(std::move(outputConfig))
 {
     if (fAnalysisConfig == nullptr) {
         G4Exception(
-            "ActionInitialization::"
-            "ActionInitialization",
+            "ActionInitialization::ActionInitialization",
             "ActionInitialization001",
             FatalException,
             "AnalysisConfig is null."
         );
     }
-}
 
+    if (fOutputConfig == nullptr) {
+        G4Exception(
+            "ActionInitialization::ActionInitialization",
+            "ActionInitialization002",
+            FatalException,
+            "OutputConfig is null."
+        );
+    }
+}
 
 ActionInitialization::~ActionInitialization()
 {
-    delete fRunConfig;
+
 }
 
 
@@ -50,7 +56,7 @@ void ActionInitialization::BuildForMaster() const
      * worker出力のマージに必要。
      */
     auto* runAction =
-        new RunAction(nullptr);
+        new RunAction(nullptr, fOutputConfig);
 
     SetUserAction(runAction);
 }
@@ -74,7 +80,7 @@ void ActionInitialization::Build() const
      * 一次粒子生成。
      */
     auto* generator =
-        new PrimaryGenerator(fRunConfig);
+        new PrimaryGenerator();
 
     SetUserAction(generator);
 
@@ -84,7 +90,7 @@ void ActionInitialization::Build() const
      * EventActionへ接続する。
      */
     auto* runAction =
-        new RunAction(eventAction);
+        new RunAction(eventAction, fOutputConfig);
 
     SetUserAction(runAction);
 

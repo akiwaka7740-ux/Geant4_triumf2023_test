@@ -2,33 +2,22 @@
 #define PRIMARYGENERATOR_HH
 
 #include "G4VUserPrimaryGeneratorAction.hh"
-#include "G4ParticleDefinition.hh"
-#include "G4ParticleGun.hh"
-#include "G4ParticleTable.hh"
-#include "G4SystemOfUnits.hh"
-#include "G4RandomDirection.hh"
-#include "G4IonTable.hh"
 
-class G4ParticleGun;
-class PrimaryGeneratorMessenger; // 前方宣言
-class RunConfig;
+class G4Event;
+class G4GeneralParticleSource;
 
 class PrimaryGenerator : public G4VUserPrimaryGeneratorAction
 {
-    public:
-     PrimaryGenerator(RunConfig* runConfig);
-     ~PrimaryGenerator();
+public:
+    PrimaryGenerator();
+    ~PrimaryGenerator() override;
 
-     virtual void GeneratePrimaries(G4Event *) override;
+    void GeneratePrimaries(G4Event* event) override;
 
-     void SetSourceType(G4String type); // ソースタイプを設定するメソッド
-
-    private:
-        G4ParticleGun *fParticleGun = nullptr;
-        PrimaryGeneratorMessenger *fMessenger = nullptr; 
-        RunConfig *fRunConfig = nullptr; 
-
+private:
+    G4GeneralParticleSource* fParticleSource = nullptr;
 };
 
-
 #endif
+
+

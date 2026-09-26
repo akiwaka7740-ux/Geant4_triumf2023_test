@@ -1,6 +1,22 @@
 /run/initialize
+
 /analysis/neutronHistoryTarget LiGlass
 /analysis/opticalRecording detailed
-/mygen/sourceType thermal_neutron
+
+# 一次粒子：1 event あたり中性子を1個生成
+/gps/particle neutron
+/gps/number 1
+
+# 発生位置：原点の点線源
+/gps/pos/type Point
+/gps/pos/centre 0 0 0 mm
+
+# 運動エネルギー：単色の熱中性子
+/gps/ene/type Mono
+/gps/ene/mono 0.025 eV
+
+# 放出方向：等方
+/gps/ang/type iso
+
 /run/printProgress 100000
 /run/beamOn 1000000

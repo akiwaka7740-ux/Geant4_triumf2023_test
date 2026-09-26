@@ -5,25 +5,25 @@
 
 #include "G4VUserActionInitialization.hh"
 
-#include "PrimaryGenerator.hh"
-#include "RunAction.hh"
-#include "RunConfig.hh"
-
 class AnalysisConfig;
+struct OutputConfig;
 
 class ActionInitialization : public G4VUserActionInitialization
 {
-    public:
-        explicit ActionInitialization(std::shared_ptr<const AnalysisConfig> analysisConfig);
-        ~ActionInitialization() override;
+public:
+    explicit ActionInitialization(
+        std::shared_ptr<const AnalysisConfig> analysisConfig,
+        std::shared_ptr<const OutputConfig> outputConfig
+    );
 
-        void BuildForMaster() const override;
-        void Build() const override;
+    ~ActionInitialization() override;
 
-    private:
-        RunConfig *fRunConfig = nullptr;
-        std::shared_ptr<const AnalysisConfig> fAnalysisConfig;
+    void BuildForMaster() const override;
+    void Build() const override;
 
+private:
+    std::shared_ptr<const AnalysisConfig> fAnalysisConfig;
+    std::shared_ptr<const OutputConfig> fOutputConfig;
 };
 
 #endif

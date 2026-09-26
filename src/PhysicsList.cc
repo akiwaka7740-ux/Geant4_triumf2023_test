@@ -6,7 +6,7 @@
 
 PhysicsList::PhysicsList(): FTFP_BERT_HP() //親クラスのコンストラクを呼ぶ
 {
-    RegisterPhysics(new G4RadioactiveDecayPhysics());
+    //RegisterPhysics(new G4RadioactiveDecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
     //RegisterPhysics(new G4DecayPhysics()); <-- これはFTFP_BERT_HPに含まれているので、重複して登録するとエラーになる
     ReplacePhysics(new G4EmLivermorePhysics()); //すでに登録されているEMstandardと交換する
     RegisterPhysics(new G4OpticalPhysics());
