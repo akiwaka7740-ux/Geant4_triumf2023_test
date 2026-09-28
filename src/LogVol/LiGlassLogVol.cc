@@ -79,7 +79,7 @@ LiGlassLogVol::LiGlassLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool che
   double cathodeWidthLiGlass = 46.0 * mm;
   double cathodeThicknessLiGlass = 1.0 * mm;
   double pmtWidthLiGlass = 53.0 * mm;
-  double pmtLengthLiGlass = 235.0 * mm;
+  double pmtLengthLiGlass = 215.0 * mm;
 
   // 各パーツのSolid作成
   G4VSolid* tmp0 = new G4Tubs(Name+"_tmp0", 0, diameterLiGlass/2., thicknessLiGlass/2., 0, 2*pi); // Scinti
@@ -118,7 +118,7 @@ LiGlassLogVol::LiGlassLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool che
 
   // これらを全て包み込む「親ボリューム（Mother Volume）」の作成
   double offset = 28.5*mm; //磁気シールドの表面からシンチレータまでの距離
-  double total_length = offset + thicknessLiGlass + pmtLengthLiGlass; // 28.5 + 245 mm
+  double total_length = offset + thicknessLiGlass + pmtLengthLiGlass; // 28.5 + 10 + 215 mm
   double max_radius   = magShieldWidthLiGlass / 2.; // 最大半径(MagShield)
   Solid = new G4Tubs(Name+"_Solid", 0, max_radius, total_length/2., 0, 2*pi);
 

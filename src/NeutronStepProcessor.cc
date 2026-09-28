@@ -222,6 +222,21 @@ NeutronStepProcessor::FindTopLevelObject(const G4VTouchable* touchable)
         return result;
     }
 
+    
+    // StopperはChamberの子になるため、World直下の判定より先に調べる。
+    // 外側から探索して、MgO板自身のcopyNo=0ではなく、
+    // Stopperの親に設定したオブジェクトIDを取得する。
+    for (G4int depth = historyDepth; depth >= 0; --depth) {
+        const auto* volume = touchable->GetVolume(depth);
+
+        if (ClassifyTopLevelVolume(volume) ==
+            GeometryObjectType::Stopper) {
+            result.type = GeometryObjectType::Stopper;
+            result.copyNo = touchable->GetCopyNumber(depth);
+            return result;
+        }
+    }
+
     // worldの一つ前が、今決定したいGeやMagnetのようなobjectに該当
     for (G4int depth = 0; depth < historyDepth; ++depth) {
         const auto* volume = touchable->GetVolume(depth);

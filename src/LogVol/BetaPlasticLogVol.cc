@@ -80,20 +80,35 @@ BetaPlasticLogVol::BetaPlasticLogVol(G4String Name, G4UserLimits* fStepLimit, G4
   if(logmode) G4cout << "-- BetaPlasticLogVol::BetaPlasticLogVol(G4String)\n";
 
   ////////////////////////////////////////////////////////////////////
-  //// Solid 
-  double thick_scinti = 1.5*mm;
-  G4VSolid* tmp0 = new G4Box(Name+"_tmp0", 2*m, 2*m, 2*m);
-  G4VSolid* tmp1 = new G4Tubs(Name+"_tmp1", 0, 35*mm, thick_scinti/2.*mm, 0, 2*pi);
-  // G4VSolid* tmp1 = new G4Tubs(Name+"_tmp1", 0, 1*m, 1.5/2.*mm, 0, 2*pi);
-  // G4VSolid* Solid0 = new G4IntersectionSolid(Name+"_Solid0", tmp0, tmp1, Move(-(1.5/2.+50)*mm, 0, 0)*Rotate( Axis::Y, -90*degree ) );
-  G4VSolid* Solid0 = new G4IntersectionSolid(Name+"_Solid0", tmp0, tmp1, Move(0, 0, 0)*Rotate( Axis::Y, -90*degree ) );
+  //// Solid
 
-  double thick_cover = 2.5*mm;
-  G4VSolid* tmp2 = new G4Tubs(Name+"_tmp2", 0, 36*mm, thick_cover/2.*mm, 0, 2*pi);
-  G4VSolid* tmp3 = new G4SubtractionSolid(Name+"_tmp3", tmp2, tmp1, G4Transform3D() );
-  G4VSolid* Solid1 = new G4IntersectionSolid(Name+"_Solid1", tmp0, tmp3, Move(0, 0, 0)*Rotate( Axis::Y, -90*degree ) );
+  const G4double thick_scinti = 1.5 * mm;
+  const G4double thick_cover  = 2.5 * mm;
 
-  Solid = new G4UnionSolid(Name+"_Solid", Solid0, Solid1, G4Transform3D() );
+  // シンチレータ：直径70 mm、厚さ1.5 mm
+  G4VSolid* Solid0 = new G4Tubs(
+      Name + "_Solid0",
+      0.,
+      35 * mm,
+      thick_scinti / 2.,
+      0.,
+      2 * pi);
+
+  // 親Volume：直径72 mm、厚さ2.5 mm
+  Solid = new G4Tubs(
+      Name + "_Solid",
+      0.,
+      36 * mm,
+      thick_cover / 2.,
+      0.,
+      2 * pi);
+
+  // カバー：外形からシンチレータ部分を除く
+  G4VSolid* Solid1 = new G4SubtractionSolid(
+      Name + "_Solid1",
+      Solid,
+      Solid0,
+      G4Transform3D());
 
   ////////////////////////////////////////////////////////////////////
   //// Material

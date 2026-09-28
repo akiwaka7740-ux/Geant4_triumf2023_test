@@ -212,7 +212,7 @@ GS20Mat::GS20Mat() {
 
 
     //　光子の発生数
-    mpt->AddConstProperty("SCINTILLATIONYIELD", 3250.0 /MeV);   //カタログ上はplasticの20~30%(諸説あり)なので、Codexとの相談の上ひとまず5500/MeVとした
+    mpt->AddConstProperty("SCINTILLATIONYIELD", 3250.0 /MeV);  
     //　光子発生のばらつき（ポアソン分布）  
     mpt->AddConstProperty("RESOLUTIONSCALE", 1.0); 
     //単一の成分のみと仮定

@@ -94,8 +94,38 @@ ChamberLogVol::ChamberLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool che
   };
   G4VSolid* Solid0 = new G4Polycone(Name+"_Solid0", 0, 2*CLHEP::pi, nZ, zPlane, rInner, rOuter);
 
-  Solid = Solid0->Clone();
-  Solid -> SetName(Name+"_Solid");
+
+  // 親はChamber内部まで含む中実の外形。
+  // 材質を真空とし、FRP壁とStopperを子として配置する。
+  const G4int nEnvelopeZ = 4;
+
+  G4double zEnvelope[nEnvelopeZ] = {
+      -277.0 * mm,
+      -84.0 * mm,
+      -84.0 * mm,
+        71.0 * mm
+  };
+
+  G4double rInnerEnvelope[nEnvelopeZ] = {
+      0, 0, 0, 0
+  };
+
+  G4double rOuterEnvelope[nEnvelopeZ] = {
+      20.0 * mm,
+      20.0 * mm,
+      19.0 * mm,
+      19.0 * mm
+  };
+
+  Solid = new G4Polycone(
+      Name + "_Solid",
+      0,
+      360 * deg,
+      nEnvelopeZ,
+      zEnvelope,
+      rInnerEnvelope,
+      rOuterEnvelope
+  );
 
   ////////////////////////////////////////////////////////////////////
   //// Material
@@ -126,7 +156,7 @@ ChamberLogVol::ChamberLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool che
     
   G4LogicalVolume* LogVol0 = new G4LogicalVolume(Solid0, Mat0, Name+"_LogVol0", 0, 0, fStepLimit, false);
 
-  //LogVol  -> SetVisAttributes( G4VisAttributes::Invisible );
+  LogVol  -> SetVisAttributes( G4VisAttributes::GetInvisible());
   //LogVol0 -> SetVisAttributes( new G4VisAttributes(TRUE,Color(ColID::White,0.5) ));
 
   G4VisAttributes* vis0 = new G4VisAttributes(TRUE, Color(ColID::Yellow, 0.5));

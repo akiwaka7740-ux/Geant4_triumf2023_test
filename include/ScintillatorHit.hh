@@ -115,46 +115,55 @@ public:
         return fFirstHitPosLocal;
     }
 
-/*
- * parentID == 0の一次中性子による
- * hadronic反応回数。
- */
-void IncrementPrimaryNeutronInteractionCount()
-{
-    ++fPrimaryNeutronInteractionCount;
-}
-
-G4int
-GetPrimaryNeutronInteractionCount() const
-{
-    return fPrimaryNeutronInteractionCount;
-}
-
-
-/*
- * NeutronTrackInfoを共有する中性子系譜全体の
- * hadronic反応回数。
- *
- * 一次中性子と、その一次中性子から生成された
- * 二次以降の中性子を含む。
- */
-void IncrementNeutronLineageInteractionCount()
-{
-    ++fNeutronLineageInteractionCount;
-}
-
-G4int
-GetNeutronLineageInteractionCount() const
-{
-    return fNeutronLineageInteractionCount;
-}
-
-
-
-    void MarkNeutronCapture()
+    /*
+    * parentID == 0の一次中性子による
+    * hadronic反応回数。
+    */
+    void IncrementPrimaryNeutronInteractionCount()
     {
+        ++fPrimaryNeutronInteractionCount;
+    }
+
+    G4int
+    GetPrimaryNeutronInteractionCount() const
+    {
+        return fPrimaryNeutronInteractionCount;
+    }
+
+
+    /*
+    * NeutronTrackInfoを共有する中性子系譜全体の
+    * hadronic反応回数。
+    *
+    * 一次中性子と、その一次中性子から生成された
+    * 二次以降の中性子を含む。
+    */
+    void IncrementNeutronLineageInteractionCount()
+    {
+        ++fNeutronLineageInteractionCount;
+    }
+
+    G4int
+    GetNeutronLineageInteractionCount() const
+    {
+        return fNeutronLineageInteractionCount;
+    }
+
+
+    void MarkNeutronCapture(G4double time)
+    {
+        if (!fHasNeutronCapture || time < fNeutronCaptureTime) {
+            fNeutronCaptureTime = time;
+        }
+
         fHasNeutronCapture = true;
     }
+
+    G4double GetNeutronCaptureTime() const
+    {
+        return fNeutronCaptureTime;
+    }
+
 
     G4bool HasNeutronCapture() const
     {
@@ -224,6 +233,7 @@ private:
     G4int fNeutronLineageInteractionCount = 0;
 
     G4bool fHasNeutronCapture = false;
+    G4double fNeutronCaptureTime = -1.0;
 
 
     /*

@@ -84,7 +84,7 @@ private:
     G4int fNeutronLineageInteractionCountColumnId = -1;
 
     G4int fHasNeutronCaptureColumnId = -1;
-
+    G4int fNeutronCaptureTimeColumnId = -1;
 
     // シンチレータ内で最初に記録された反応の列番号
     G4int fHasFirstHitColumnId = -1;
@@ -103,6 +103,7 @@ private:
 
     // 入射中性子情報の列番号
     G4int fHasIncidentNeutronDataColumnId = -1;
+
 
     G4int fIncidentNeutronTrackIdColumnId = -1;
     G4int fIncidentNeutronParentTrackIdColumnId = -1;

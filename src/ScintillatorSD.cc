@@ -491,7 +491,7 @@ void ScintillatorSD::RecordNeutronCapture(
     }
 
     if (hasTriton && hasAlpha) {
-        hit.MarkNeutronCapture();
+        hit.MarkNeutronCapture(postPoint->GetGlobalTime());
     }
 }
 

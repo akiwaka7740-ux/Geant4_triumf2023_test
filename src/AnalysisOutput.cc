@@ -123,6 +123,12 @@ void AnalysisOutput::Book()
             "HasNeutronCapture"
         );
 
+    fNeutronCaptureTimeColumnId =
+        analysisManager->CreateNtupleDColumn(
+            fNtupleId,
+            "NeutronCaptureTime_ns"
+        );
+
 
     // 最初の反応
     fHasFirstHitColumnId =
@@ -433,7 +439,7 @@ void AnalysisOutput::FillChannelRow(
     G4int neutronLineageInteractionCount = 0;
 
     G4int hasNeutronCapture = 0;
-
+    G4double neutronCaptureTime = kInvalidTime;
 
     G4int hasFirstHit = 0;
 
@@ -503,6 +509,11 @@ void AnalysisOutput::FillChannelRow(
             scintillatorHit->HasNeutronCapture()
             ? 1
             : 0;
+        
+        if (scintillatorHit->HasNeutronCapture()) {
+            neutronCaptureTime =
+                scintillatorHit->GetNeutronCaptureTime() / ns;
+        }
 
 
         if (scintillatorHit->HasFirstHit()) {
@@ -877,6 +888,10 @@ void AnalysisOutput::FillChannelRow(
         hasNeutronCapture
     );
 
+    fillD(
+        fNeutronCaptureTimeColumnId,
+        neutronCaptureTime
+    );
 
     // 最初の反応
     fillI(

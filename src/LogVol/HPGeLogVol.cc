@@ -79,7 +79,7 @@ namespace HPGeGeom {
     { "Handai55",    { 63.7*mm, 87.3*mm,  83.0*mm, 416.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, //結晶サイズ以外はmanualに沿って入れた（合ってるかの確証はない）
     { "Handai50",    { 65.0*mm, 63.0*mm,  90.0*mm, 346.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, 
     { "Handai45",    { 62.0*mm, 65.0*mm,  80.0*mm, 285.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, 
-    { "Kyudai80",    { 58.0*mm, 75.0*mm,  90.0*mm, 317.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } },//結晶サイズだけわからないので、Kyudai40と同じ値を仮に入れている
+    { "Kyudai80",    { 74.3*mm, 74.3*mm,  90.0*mm, 310.0*mm,  60*mm,  222*mm, 343*mm, 70.0*mm } },
     { "Kyudai40",    { 58.0*mm, 75.0*mm,  70.0*mm, 351.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, 
     { "KyudaiLEPS",  { 51.0*mm, 20.1*mm,  70.0*mm, 238.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, 
     { "Ishinomaki",  { 63.6*mm, 71.8*mm,  83.0*mm, 311.0*mm,  60*mm,  222*mm, 267*mm, 70.0*mm } }, 
@@ -196,9 +196,12 @@ HPGeLogVol::HPGeLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOver
   tmp[0] = new G4UnionSolid(Name+"_tmp0", Solid0, Solid1, G4Transform3D());
   tmp[1] = new G4UnionSolid(Name+"_tmp1", tmp[0], Solid2, G4Transform3D());
   tmp[2] = new G4UnionSolid(Name+"_tmp2", tmp[1], Solid3, G4Transform3D());
-  tmp[3] = new G4UnionSolid(Name+"_tmp3", tmp[2], Solid4, G4Transform3D());
+  
+  // Plaは別途設定
+  //tmp[3] = new G4UnionSolid(Name+"_tmp3", tmp[2], Solid4, G4Transform3D());
   // Solid = tmp[2];
-  Solid = tmp[3];
+  Solid = tmp[2];
+  //Solid = tmp[3];
 
   //////////////////////////////////////////////////////
   //// Material
@@ -207,7 +210,7 @@ HPGeLogVol::HPGeLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOver
   auto Mat1 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Al");
   auto Mat2 = G4NistManager::Instance()->FindOrBuildMaterial("G4_Ge");
   auto Mat3 = G4NistManager::Instance()->FindOrBuildMaterial("LiquidNitrogen");
-  auto Mat4 = G4NistManager::Instance()->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
+ // auto Mat4 = G4NistManager::Instance()->FindOrBuildMaterial("G4_PLASTIC_SC_VINYLTOLUENE");
   if( !Mat3 ) Mat3 = new G4Material( "LiquidNitrogen",
                                      7.,
                                      14.01*g/mole,
@@ -223,7 +226,7 @@ HPGeLogVol::HPGeLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOver
   G4LogicalVolume* LogVol1 = new G4LogicalVolume(Solid1, Mat1, Name+"_Dewar_LogVol",   0, 0, fStepLimit);
   G4LogicalVolume* LogVol2 = new G4LogicalVolume(Solid2, Mat2, Name+"_Crystal_LogVol", 0, 0, fStepLimit);
   G4LogicalVolume* LogVol3 = new G4LogicalVolume(Solid3, Mat3, Name+"_LiqN2_LogVol",   0, 0, fStepLimit);
-  G4LogicalVolume* LogVol4 = new G4LogicalVolume(Solid4, Mat4, Name+"_Pla_LogVol",     0, 0, fStepLimit);
+  //G4LogicalVolume* LogVol4 = new G4LogicalVolume(Solid4, Mat4, Name+"_Pla_LogVol",     0, 0, fStepLimit);
 
   // 可視化属性の定義と設定
   
@@ -247,16 +250,20 @@ HPGeLogVol::HPGeLogVol(G4String Name, G4UserLimits* fStepLimit, G4bool checkOver
   vis3->SetForceSolid(true);
   LogVol3->SetVisAttributes(vis3);
 
+  /*
   // Plastic (Cyan, 100%不透明)
   G4VisAttributes* vis4 = new G4VisAttributes(TRUE, Color(ColID::Cyan, 1.0));
   vis4->SetForceSolid(true);
   LogVol4->SetVisAttributes(vis4);
+  */
 
   new G4PVPlacement(G4Transform3D(), LogVol0, "Kubi"   , LogVol, false, 0, checkOverlaps);
   new G4PVPlacement(G4Transform3D(), LogVol1, "Dewar"  , LogVol, false, 1, checkOverlaps);
   new G4PVPlacement(G4Transform3D(), LogVol2, "Crystal", LogVol, false, 2, checkOverlaps);
   new G4PVPlacement(G4Transform3D(), LogVol3, "LiqN2"  , LogVol, false, 3, checkOverlaps);
-  new G4PVPlacement(G4Transform3D(), LogVol4, "Pla"    , LogVol, false, 4, checkOverlaps);
+
+  // Plaは別途設定
+  //new G4PVPlacement(G4Transform3D(), LogVol4, "Pla"    , LogVol, false, 4, checkOverlaps);
 
   if(logmode) G4cout << "== HPGeLogVol::HPGeLogVol(G4String)\n";
 }
