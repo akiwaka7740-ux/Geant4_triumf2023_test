@@ -29,6 +29,10 @@ private:
 
     G4UIdirectory* fDirectory = nullptr;
 
+    //イベントの保存条件
+    G4UIcmdWithAString*
+        fEventSelectionCommand = nullptr;
+
     //光学光子の記録モード
     G4UIcmdWithAString*
         fOpticalRecordingCommand = nullptr;

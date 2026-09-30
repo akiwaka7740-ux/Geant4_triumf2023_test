@@ -55,12 +55,12 @@ std::map<G4String, EnableAndID> Mode = {
 //テスト用
 std::map<G4String, EnableAndID> Mode = {
     {"LiGlass", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::LiGlass),
         1
     }},
     {"UROKO", {
-        true,
+        false,
         ObjectBaseId(GeometryObjectType::UROKO),
         4
     }},
@@ -70,44 +70,44 @@ std::map<G4String, EnableAndID> Mode = {
         6
     }},
     {"HPGe", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::HPGe),
         7
     }},
     {"BetaPlastic", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::BetaPlastic),
         10
     }},
     {"Magnet", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Magnet),
         1
     }},
     {"Frame", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Frame),
         1
     }},
     {"Floor", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Floor),
         1
     }},
     {"Shield", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Shield),
         6
     }},
 
     // Stopperの親VolumeはStopperであるため、同時に有効化することが必要
     {"Chamber", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Chamber),
         1
     }},
     {"Stopper", {
-        false,
+        true,
         ObjectBaseId(GeometryObjectType::Stopper),
         1
     }}
@@ -151,11 +151,11 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
     // =============================================================
     // World Volume
     // =============================================================
-    G4double world_size = 4.0 * m;
+    G4double world_size = 6.0 * m;
     G4Box* World_Solid = new G4Box("World_Solid", world_size/2., world_size/2., world_size/2.);
     fWorldLogicalVolume = new G4LogicalVolume(World_Solid, matAir, "World_LogVol");
     fWorldLogicalVolume->SetVisAttributes(new G4VisAttributes(TRUE, G4Colour(1.0, 1.0, 1.0, 0.0)));
-    G4VPhysicalVolume* World_PhysVol = new G4PVPlacement(0, G4ThreeVector(), fWorldLogicalVolume, "World_PhysVol", 0, false, 0, checkOverlaps);
+    G4VPhysicalVolume* World_PhysVol = new G4PVPlacement(0, G4ThreeVector(), fWorldLogicalVolume, "World", 0, false, 0, checkOverlaps);
 
     G4String objName;
 
@@ -176,7 +176,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4RotationMatrix rotLiGlass;
         rotLiGlass.rotateX(-90.0 * deg);
         G4ThreeVector posLiGlass(0.0, frontLiGlass - (totalLengthLiGlass / 2.0) + length_emptyspace, 0.0);
-        new G4PVPlacement(G4Transform3D(rotLiGlass, posLiGlass), objName+"_Phys", liGlassLogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
+        new G4PVPlacement(G4Transform3D(rotLiGlass, posLiGlass), objName, liGlassLogVol, World_PhysVol, false, Mode[objName].ID, checkOverlaps);
     }
 
     // =============================================================
@@ -215,7 +215,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
         for(G4int i=0; i<nObj; i++) {
             pos_UROKO[i].setX(pos_UROKO[i].getX() + (total_Z_UROKO / 2.0));
-            new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName+"_Phys", UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
+            new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName, UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
         }
         */
 
@@ -335,7 +335,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
             new G4PVPlacement(
                 G4Transform3D(rot_UROKO[i], newPosition),
-                objName + "_Phys",
+                objName,
                 UROKO_LogVol,
                 World_PhysVol,
                 false,
@@ -357,7 +357,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
         for(G4int i=0; i<nObj; i++){
             pos_UROKO[i].setX(pos_UROKO[i].getX() + (fUROKO->GetTotalZ()/ 2.0 - 0.01*mm));  //真空層の文を引く
-            new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName+"_Phys", UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
+            new G4PVPlacement(G4Transform3D(rot_UROKO[i], pos_UROKO[i]), objName, UROKO_LogVol, World_PhysVol, false, Mode[objName].ID + i, checkOverlaps);
         }
         */
     }
@@ -420,7 +420,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
 
         // 4. 配置ループ (IDの自動付与)
         for(G4int i=0; i<nObj; i++) {
-            new G4PVPlacement(trans_HILE[i], Hile_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID + i, checkOverlaps);
+            new G4PVPlacement(trans_HILE[i], Hile_LogVol, objName, fWorldLogicalVolume, false, Mode[objName].ID + i, checkOverlaps);
         }
         */
 
@@ -433,7 +433,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4Transform3D transform_HILE=
                 Rotate(Axis::Z, 12.3/2 * deg) * G4Translate3D((rMin_HILE_Scinti + rMax_HILE_Scinti)/2, 0, 0) * Rotate(Axis::X, 180 * deg);
 
-        new G4PVPlacement(transform_HILE, Hile_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
+        new G4PVPlacement(transform_HILE, Hile_LogVol, objName, fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
 
     }
 
@@ -511,7 +511,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4LogicalVolume* Mag_LogVol = fMagnet->GetLogicalVolume();
 
         //そのまま配置すればOK
-        new G4PVPlacement(0, G4ThreeVector(0,0,0), Mag_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
+        new G4PVPlacement(0, G4ThreeVector(0,0,0), Mag_LogVol, objName, fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
 
     }
 
@@ -524,7 +524,7 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4LogicalVolume* BetaPlastic_LogVol = fBetaPlastic->GetLogicalVolume();
 
         //仮としてその場に配置
-        new G4PVPlacement(0, G4ThreeVector(0,0,0), BetaPlastic_LogVol, objName+"_Phys", fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
+        new G4PVPlacement(0, G4ThreeVector(0,0,0), BetaPlastic_LogVol, objName, fWorldLogicalVolume, false, Mode[objName].ID, checkOverlaps);
         */
 
         const int nObj = Mode[objName].nObj;
@@ -614,9 +614,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
         G4LogicalVolume* Shield_LogVol;
         for(int i=0;i<nObj; i++){
             Shield_LogVol = fShield->GetLogicalVolume( (i==0)?1:(i==5)?2:0 );
-            G4String objNamei = objName + std::to_string(i);
             new G4PVPlacement( G4Transform3D( rotShield[i], vecShield[i] ),
-                objNamei, Shield_LogVol, World_PhysVol, false, Mode[objName].ID+i, checkOverlaps);
+                objName, Shield_LogVol, World_PhysVol, false, Mode[objName].ID+i, checkOverlaps);
         }
     }
 

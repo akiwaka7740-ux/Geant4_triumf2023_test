@@ -11,15 +11,26 @@ enum class OpticalRecordingMode : G4int {
     Detailed = 2
 };
 
+enum class EventSelectionMode : G4int {
+    All = 0,
+    ScintiEdep = 1,
+    NeutronCapture = 2,
+};
+
+
 class AnalysisConfig {
 public:
     AnalysisConfig() = default;
     ~AnalysisConfig() = default;
 
+    void SetEventSelectionMode(EventSelectionMode mode);
+    EventSelectionMode
+    GetEventSelectionMode() const;
+
+
     void SetOpticalRecordingMode(
         OpticalRecordingMode mode
     );
-
     OpticalRecordingMode
     GetOpticalRecordingMode() const;
 
@@ -35,6 +46,9 @@ public:
 
 
 private:
+    EventSelectionMode fEventSelectionMode =
+        EventSelectionMode::All;
+        
     OpticalRecordingMode fOpticalRecordingMode =
         OpticalRecordingMode::Summary;
     

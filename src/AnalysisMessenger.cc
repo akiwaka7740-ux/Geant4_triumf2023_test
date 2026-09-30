@@ -31,6 +31,38 @@ AnalysisMessenger::AnalysisMessenger(
         "Analysis output control commands."
     );
 
+    // =========================================================
+    // イベント選別（データ取得のトリガーを設定）
+    // =========================================================  
+    fEventSelectionCommand = 
+        new G4UIcmdWithAString(
+            "/analysis/eventSelection",
+            this
+        );
+
+    fEventSelectionCommand->SetGuidance(
+        "Select which events are written to the ROOT file"
+    );
+
+    fEventSelectionCommand->SetGuidance(
+        "all : write all events."
+    );
+
+    fEventSelectionCommand->SetGuidance(
+        "edep: write events with ScintiEdep_MeV > 0 "
+        "in any scintillator."
+    );
+    fEventSelectionCommand->SetGuidance(
+        "capture: write events with HasNeutronCapture "
+        "in any scintillator."
+    );
+
+    fEventSelectionCommand->SetParameterName("mode", false);
+    fEventSelectionCommand->SetCandidates("all edep capture");
+    fEventSelectionCommand->AvailableForStates(
+        G4State_PreInit,
+        G4State_Idle
+    );
 
     // =========================================================
     // 光学光子記録モード
@@ -120,6 +152,7 @@ AnalysisMessenger::~AnalysisMessenger()
 {
     delete fNeutronHistoryTargetCommand;
     delete fOpticalRecordingCommand;
+    delete fEventSelectionCommand;
     delete fDirectory;
 }
 
@@ -133,7 +166,8 @@ void AnalysisMessenger::SetNewValue(
      * このMessengerが管理していないコマンドなら、
      * 何も処理しない。
      */
-    if (command != fOpticalRecordingCommand &&
+    if (command != fEventSelectionCommand &&
+        command != fOpticalRecordingCommand &&
         command != fNeutronHistoryTargetCommand) {
         return;
     }
@@ -146,6 +180,46 @@ void AnalysisMessenger::SetNewValue(
             "AnalysisConfig is null."
         );
 
+        return;
+    }
+
+    // =========================================================
+    // イベント選別（データ取得のトリガーを設定）
+    // =========================================================  
+    if (command == fEventSelectionCommand) {
+        if (newValue == "all") {
+            fConfig->SetEventSelectionMode(
+                EventSelectionMode::All
+            );
+            return;
+        }
+
+        if (newValue == "edep") {
+            fConfig->SetEventSelectionMode(
+                EventSelectionMode::ScintiEdep
+            );
+            return;
+        }
+
+        if (newValue == "capture") {
+            fConfig->SetEventSelectionMode(
+                EventSelectionMode::NeutronCapture
+            );
+            return;
+        }
+
+        G4ExceptionDescription description;
+        description
+            << "Unknown event selection mode: "
+            << newValue
+            << ". Expected all, edep, or capture.";
+
+        G4Exception(
+            "AnalysisMessenger::SetNewValue",
+            "AnalysisMessenger005",
+            JustWarning,
+            description
+        );
         return;
     }
 

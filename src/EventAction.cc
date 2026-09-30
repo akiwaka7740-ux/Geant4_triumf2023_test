@@ -1,5 +1,6 @@
 #include "EventAction.hh"
 
+#include "RunAction.hh"
 #include "AnalysisConfig.hh"
 #include "AnalysisOutput.hh"
 #include "DetectorChannelKey.hh"
@@ -131,6 +132,12 @@ void EventAction::EndOfEventAction(
         event == nullptr ||
         fAnalysisOutput == nullptr
     ) {
+        G4Exception(
+            "EventAction::EndOfEventAction",
+            "EventAction011",
+            FatalException,
+            "Event or AnalysisOutput is null."
+        );
         return;
     }
 
@@ -154,9 +161,8 @@ void EventAction::EndOfEventAction(
         G4Exception(
             "EventAction::EndOfEventAction",
             "EventAction004",
-            JustWarning,
-            "G4HCofThisEvent is null. "
-            "This event will not be written."
+            FatalException,
+            "G4HCofThisEvent is null."
         );
 
         return;
@@ -182,9 +188,8 @@ void EventAction::EndOfEventAction(
         G4Exception(
             "EventAction::EndOfEventAction",
             "EventAction005",
-            JustWarning,
-            "ScintillatorHitsCollection was not found. "
-            "This event will not be written."
+            FatalException,
+            "ScintillatorHitsCollection was not found."
         );
 
         return;
@@ -194,13 +199,84 @@ void EventAction::EndOfEventAction(
         G4Exception(
             "EventAction::EndOfEventAction",
             "EventAction006",
-            JustWarning,
-            "PhotocathodeHitsCollection was not found. "
-            "This event will not be written."
+            FatalException,
+            "PhotocathodeHitsCollection was not found."
         );
 
         return;
     }
+
+    // EventSelectionModeに応じて出力を変更
+    if (fRunAction == nullptr) {
+        G4Exception(
+            "EventAction::EndOfEventAction",
+            "EventAction009",
+            FatalException,
+            "RunAction is null."
+        );
+        return;
+    }
+
+    const auto selectionMode =
+        fAnalysisConfig->GetEventSelectionMode();
+
+    G4bool selected = false;
+
+    switch (selectionMode) {
+    case EventSelectionMode::All:
+        selected = true;
+        break;
+
+    case EventSelectionMode::ScintiEdep:
+    case EventSelectionMode::NeutronCapture:
+        for (std::size_t index = 0;
+            index < scintillatorHits->entries();
+            ++index) {
+            const auto* hit = (*scintillatorHits)[index];
+
+            if (hit == nullptr) {
+                continue;
+            }
+
+            if (selectionMode == EventSelectionMode::ScintiEdep &&
+                hit->GetTotalEdep() > 0.0) {
+                selected = true;
+                break;
+            }
+
+            if (selectionMode == EventSelectionMode::NeutronCapture &&
+                hit->HasNeutronCapture()) {
+                selected = true;
+                break;
+            }
+        }
+        break;
+
+    default:
+        G4Exception(
+            "EventAction::EndOfEventAction",
+            "EventAction010",
+            FatalException,
+            "Unknown event selection mode."
+        );
+        return;
+    }
+
+    if (!selected) {
+        return;
+    }
+
+    if (photocathodeHits->entries() == 0) {
+        G4Exception(
+            "EventAction::EndOfEventAction",
+            "EventAction012",
+            FatalException,
+            "Selected event has no PMT channel hits."
+        );
+        return;
+    }
+
+    fRunAction->CountSelectedEvent();
 
 
     /*
@@ -312,7 +388,13 @@ void EventAction::EndOfEventAction(
             (*photocathodeHits)[index];
 
         if (photocathodeHit == nullptr) {
-            continue;
+            G4Exception(
+                "EventAction::EndOfEventAction",
+                "EventAction013",
+                FatalException,
+                "PhotocathodeHitsCollection contains a null hit."
+            );
+            return;
         }
 
 
@@ -353,12 +435,12 @@ void EventAction::EndOfEventAction(
             G4Exception(
                 "EventAction::EndOfEventAction",
                 "EventAction008",
-                JustWarning,
+                FatalException,
                 "PMT totals were not found for "
                 "the current detector."
             );
 
-            continue;
+            return;
         }
 
         const auto& totals =

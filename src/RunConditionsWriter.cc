@@ -89,6 +89,20 @@ void WriteVector(
         << ']';
 }
 
+const char* EventSelectionModeName(EventSelectionMode mode)
+{
+    switch (mode) {
+    case EventSelectionMode::All:
+        return "all";
+    case EventSelectionMode::ScintiEdep:
+        return "edep";
+    case EventSelectionMode::NeutronCapture:
+        return "capture";
+    }
+
+    Fail("Unknown event selection mode.");
+}
+
 const char* StatusName(RunConditionsWriter::Status status)
 {
     using Status = RunConditionsWriter::Status;
@@ -130,6 +144,8 @@ void Write(
     const G4String& rootFilePath,
     G4int requestedEvents,
     G4int processedEvents,
+    G4long selectedEvents,
+    EventSelectionMode selectionMode,
     Status status
 )
 {
@@ -138,9 +154,11 @@ void Write(
     if (
         conditions.runId < 0 ||
         requestedEvents < 0 ||
-        processedEvents < 0
+        processedEvents < 0 ||
+        selectedEvents < 0 ||
+        selectedEvents > processedEvents
     ) {
-        Fail("Run ID and event counts must be non-negative.");
+        Fail("Invalid Run ID or event counts.");
     }
 
     const fs::path executionDirectory{
@@ -189,7 +207,7 @@ void Write(
 
     json
         << "{\n"
-        << "  \"schema_version\": 1,\n"
+        << "  \"schema_version\": 2,\n"
         << "  \"execution_id\": "
         << Quote(outputConfig.executionId) << ",\n"
         << "  \"run_id\": " << conditions.runId << ",\n"
@@ -199,6 +217,11 @@ void Write(
         << requestedEvents << ",\n"
         << "  \"processed_events\": "
         << processedEvents << ",\n"
+        << "  \"selected_events\":"
+        << selectedEvents << ",\n"
+        << "  \"event_selection_mode\":"
+        << Quote(EventSelectionModeName(selectionMode))
+        << ",\n"
         << "  \"root_naming_mode\": "
         << Quote(NamingModeName(outputConfig.namingMode))
         << ",\n"

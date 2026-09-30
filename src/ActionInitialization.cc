@@ -56,7 +56,7 @@ void ActionInitialization::BuildForMaster() const
      * worker出力のマージに必要。
      */
     auto* runAction =
-        new RunAction(nullptr, fOutputConfig);
+        new RunAction(nullptr, fAnalysisConfig, fOutputConfig);
 
     SetUserAction(runAction);
 }
@@ -90,7 +90,7 @@ void ActionInitialization::Build() const
      * EventActionへ接続する。
      */
     auto* runAction =
-        new RunAction(eventAction, fOutputConfig);
+        new RunAction(eventAction, fAnalysisConfig,fOutputConfig);
 
     SetUserAction(runAction);
 

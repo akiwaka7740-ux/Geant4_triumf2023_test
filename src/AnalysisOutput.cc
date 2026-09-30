@@ -10,6 +10,7 @@
 #include "G4SystemOfUnits.hh"
 
 #include <cmath>
+#include <stdexcept>
 
 
 namespace {
@@ -24,6 +25,19 @@ constexpr G4double kInvalidPosition = -99999.0;
 constexpr G4double kInvalidTime = -99999.0;
 constexpr G4double kInvalidEnergy = -99999.0;
 constexpr G4int kMissingIdentifier = -1;
+
+
+[[noreturn]] void FailNtupleWrite(const char* message)
+{
+    G4Exception(
+        "AnalysisOutput::FillChannelRow",
+        "AnalysisOutput002",
+        FatalException,
+        message
+    );
+
+    throw std::runtime_error(message);
+}
 
 }
 
@@ -797,22 +811,28 @@ void AnalysisOutput::FillChannelRow(
      */
     auto fillI =
         [&](G4int columnId, G4int value) {
-            analysisManager
-                ->FillNtupleIColumn(
+            if (!analysisManager->FillNtupleIColumn(
                     fNtupleId,
                     columnId,
                     value
+                )) {
+                FailNtupleWrite(
+                    "Cannot fill an integer ntuple column."
                 );
+            }
         };
 
     auto fillD =
         [&](G4int columnId, G4double value) {
-            analysisManager
-                ->FillNtupleDColumn(
+            if (!analysisManager->FillNtupleDColumn(
                     fNtupleId,
                     columnId,
                     value
+                )) {
+                FailNtupleWrite(
+                    "Cannot fill a floating-point ntuple column."
                 );
+            }
         };
 
 
@@ -1028,7 +1048,7 @@ void AnalysisOutput::FillChannelRow(
      * vector branchはAddNtupleRow時点の
      * バッファ内容がROOTへ保存される。
      */
-    analysisManager->AddNtupleRow(
-        fNtupleId
-    );
+    if (!analysisManager->AddNtupleRow(fNtupleId)) {
+        FailNtupleWrite("Cannot add an ntuple row.");
+    }
 }

@@ -1,6 +1,7 @@
 #ifndef RUNCONDITIONSWRITER_HH
 #define RUNCONDITIONSWRITER_HH
 
+#include "AnalysisConfig.hh"
 #include "RunConditions.hh"
 
 struct OutputConfig;
@@ -21,6 +22,8 @@ void Write(
     const G4String& rootFilePath,
     G4int requestedEvents,
     G4int processedEvents,
+    G4long selectedEvents,
+    EventSelectionMode selectionMode,
     Status status
 );
 

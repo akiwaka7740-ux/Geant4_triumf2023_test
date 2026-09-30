@@ -51,7 +51,9 @@ def collect_runs(directory, execution_id, naming_mode):
             if not isinstance(data, dict):
                 raise ValueError("Conditions must be a JSON object.")
 
-            if data.get("schema_version") != 1:
+            schema_version = data.get("schema_version")
+
+            if type(schema_version) is not int or schema_version not in (1, 2):
                 raise ValueError("Unsupported conditions schema.")
 
             if data.get("execution_id") != execution_id:
@@ -74,6 +76,26 @@ def collect_runs(directory, execution_id, naming_mode):
                     raise ValueError(
                         f"{name} must be a non-negative integer."
                     )
+
+            if schema_version == 2:
+                selected = data["selected_events"]
+                selection_mode = data["event_selection_mode"]
+
+                if (
+                    type(selected) is not int
+                    or selected < 0
+                    or selected > processed
+                ):
+                    raise ValueError(
+                        "selected_events must be an integer between "
+                        "zero and processed_events."
+                    )
+
+                if selection_mode not in ("all", "edep", "capture"):
+                    raise ValueError("Unknown event selection mode.")
+            else:
+                selected = None
+                selection_mode = None
 
             if path.name != f"run{run_id:03d}.json":
                 raise ValueError("Filename does not match Run ID.")
@@ -136,6 +158,8 @@ def collect_runs(directory, execution_id, naming_mode):
                 "status": status,
                 "requested_events": requested,
                 "processed_events": processed,
+                "selected_events": selected,
+                "event_selection_mode": selection_mode,
             })
 
         except (OSError, ValueError, TypeError, KeyError) as error:

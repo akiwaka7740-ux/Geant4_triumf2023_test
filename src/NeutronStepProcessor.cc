@@ -267,19 +267,19 @@ GeometryObjectType NeutronStepProcessor::ClassifyTopLevelVolume(
 
     const auto& name = volume->GetName();
 
-    if (name == "World_PhysVol") {
+    if (name == "World") {
         return GeometryObjectType::World;
     }
 
-    if (name == "LiGlass_Phys") {
+    if (name == "LiGlass") {
         return GeometryObjectType::LiGlass;
     }
 
-    if (name == "UROKO_Phys") {
+    if (name == "UROKO") {
         return GeometryObjectType::UROKO;
     }
 
-    if (name == "HILE_Phys") {
+    if (name == "HILE") {
         return GeometryObjectType::HILE;
     }
 
@@ -297,11 +297,11 @@ GeometryObjectType NeutronStepProcessor::ClassifyTopLevelVolume(
         return GeometryObjectType::HPGe;
     }
 
-    if (name == "BetaPlastic_Phys") {
+    if (name == "BetaPlastic") {
         return GeometryObjectType::BetaPlastic;
     }
 
-    if (name == "Magnet_Phys") {
+    if (name == "Magnet") {
         return GeometryObjectType::Magnet;
     }
 
@@ -313,7 +313,7 @@ GeometryObjectType NeutronStepProcessor::ClassifyTopLevelVolume(
         return GeometryObjectType::Floor;
     }
 
-    if (name.rfind("Shield", 0) == 0) {
+    if (name == "Shield") {
         return GeometryObjectType::Shield;
     }
 

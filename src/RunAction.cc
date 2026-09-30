@@ -2,16 +2,19 @@
 
 #include "EventAction.hh"
 #include "OutputConfig.hh"
+#include "RunConditionsWriter.hh"
+#include "RunInfoWriter.hh"
 #include "SourceConditionsReader.hh"
 
+#include "G4AccumulableManager.hh"
 #include "G4AnalysisManager.hh"
 #include "G4Exception.hh"
 #include "G4Run.hh"
 #include "G4SystemOfUnits.hh"
 #include "globals.hh"
-#include "RunConditionsWriter.hh"
 
 #include <atomic>
+#include <exception>
 #include <filesystem>
 #include <iomanip>
 #include <locale>
@@ -19,7 +22,6 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
-
 
 namespace
 {
@@ -114,10 +116,21 @@ G4String GetOutputRootFileName(
 
 RunAction::RunAction(
     EventAction* eventAction,
+    std::shared_ptr<const AnalysisConfig> analysisConfig,
     std::shared_ptr<const OutputConfig> outputConfig
 )
-    : fOutputConfig(std::move(outputConfig))
+    : fAnalysisConfig(std::move(analysisConfig)),
+      fOutputConfig(std::move(outputConfig))
 {
+    if (fAnalysisConfig == nullptr) {
+        G4Exception(
+            "RunAction::RunAction",
+            "RunAction008",
+            FatalException,
+            "AnalysisConfig is null."
+        );
+    }
+
     if (fOutputConfig == nullptr) {
         G4Exception(
             "RunAction::RunAction",
@@ -127,15 +140,24 @@ RunAction::RunAction(
         );
     }
 
+    G4AccumulableManager::Instance()
+        ->RegisterAccumulable(fSelectedEvents);
+
     // master と各 worker に同じ ntuple 構成を定義する
     fAnalysisOutput.Book();
 
-    // worker の EventAction に解析出力を接続する
+    // worker の EventAction に解析出力と RunAction を接続する
     if (eventAction != nullptr) {
         eventAction->SetAnalysisOutput(
             &fAnalysisOutput
         );
+        eventAction->SetRunAction(this);
     }
+}
+
+void RunAction::CountSelectedEvent()
+{
+    fSelectedEvents += 1;
 }
 
 void RunAction::BeginOfRunAction(const G4Run* run)
@@ -149,6 +171,11 @@ void RunAction::BeginOfRunAction(const G4Run* run)
             "Run is null at BeginOfRunAction."
         );
     }
+
+    G4AccumulableManager::Instance()->Reset();
+
+    fRunEventSelectionMode =
+        fAnalysisConfig->GetEventSelectionMode();
 
     if (IsMaster()) {
         gRunOutputFailed.store(false);
@@ -175,6 +202,8 @@ void RunAction::BeginOfRunAction(const G4Run* run)
             fOutputRootFileName,
             run->GetNumberOfEventToBeProcessed(),
             0,
+            0,
+            fRunEventSelectionMode,
             RunConditionsWriter::Status::Running
         );
     }
@@ -194,6 +223,8 @@ void RunAction::BeginOfRunAction(const G4Run* run)
                 fOutputRootFileName,
                 run->GetNumberOfEventToBeProcessed(),
                 0,
+                0,
+                fRunEventSelectionMode,
                 RunConditionsWriter::Status::Failed
             );
         }
@@ -212,9 +243,6 @@ void RunAction::BeginOfRunAction(const G4Run* run)
             << G4endl;
     }
 }
-
-
-
 
 void RunAction::EndOfRunAction(const G4Run* run)
 {
@@ -236,6 +264,10 @@ void RunAction::EndOfRunAction(const G4Run* run)
         );
     }
 
+    // worker の値を master に合算する。
+    // master と逐次実行では Merge() は何もしない。
+    G4AccumulableManager::Instance()->Merge();
+
     auto* analysisManager =
         G4AnalysisManager::Instance();
 
@@ -250,7 +282,7 @@ void RunAction::EndOfRunAction(const G4Run* run)
         gRunOutputFailed.store(true);
     }
 
-    // JSON の更新は master のみ。
+    // JSON と run_info の更新は master のみ。
     // 逐次実行でも IsMaster() は true となる。
     if (!IsMaster()) {
         return;
@@ -276,12 +308,42 @@ void RunAction::EndOfRunAction(const G4Run* run)
         status = Status::Aborted;
     }
 
+    // Geant4 の ROOT ファイルを閉じた後で run_info を追記する。
+    if (status != Status::Failed) {
+        RunInfo info;
+        info.runId = run->GetRunID();
+        info.requestedEvents = requestedEvents;
+        info.processedEvents = processedEvents;
+        info.selectedEvents = fSelectedEvents.GetValue();
+        info.selectionMode = fRunEventSelectionMode;
+        info.status = status;
+
+        try {
+            RunInfoWriter::Write(
+                fOutputRootFileName,
+                info
+            );
+        }
+        catch (const std::exception& error) {
+            gRunOutputFailed.store(true);
+            status = Status::Failed;
+
+            G4cerr
+                << "run_info output failed: "
+                << error.what()
+                << G4endl;
+        }
+    }
+
+    // run_info の追記結果を反映した状態を JSON に保存する
     RunConditionsWriter::Write(
         *fOutputConfig,
         *fRunConditions,
         fOutputRootFileName,
         requestedEvents,
         processedEvents,
+        fSelectedEvents.GetValue(),
+        fRunEventSelectionMode,
         status
     );
 

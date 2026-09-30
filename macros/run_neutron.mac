@@ -1,7 +1,7 @@
 /run/initialize
 
 /analysis/neutronHistoryTarget LiGlass
-/analysis/opticalRecording detailed
+/analysis/opticalRecording off
 
 # 一次粒子：1 event あたり中性子を1個生成
 /gps/particle neutron
@@ -11,12 +11,12 @@
 /gps/pos/type Point
 /gps/pos/centre 0 0 0 mm
 
-# 運動エネルギー：単色の熱中性子
+# 運動エネルギー：
 /gps/ene/type Mono
-/gps/ene/mono 0.5 MeV
+/gps/ene/mono 0.1 MeV
 
 # 放出方向：等方
 /gps/ang/type iso
 
 /run/printProgress 1000000
-/run/beamOn 50000000
+/run/beamOn 500000000

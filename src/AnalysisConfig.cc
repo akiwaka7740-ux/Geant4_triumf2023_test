@@ -1,5 +1,19 @@
 #include "AnalysisConfig.hh"
 
+void AnalysisConfig::SetEventSelectionMode(
+    EventSelectionMode mode
+)
+{
+    fEventSelectionMode = mode;
+}
+
+EventSelectionMode
+AnalysisConfig::GetEventSelectionMode() const
+{
+    return fEventSelectionMode;
+}
+
+
 void AnalysisConfig::SetOpticalRecordingMode(
     OpticalRecordingMode mode
 )

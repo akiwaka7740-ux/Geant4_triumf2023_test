@@ -10,6 +10,7 @@
 class AnalysisConfig;
 class AnalysisOutput;
 class G4Event;
+class RunAction;
 
 
 class EventAction : public G4UserEventAction {
@@ -48,6 +49,10 @@ public:
         fAnalysisOutput = analysisOutput;
     }
 
+    void SetRunAction(RunAction* runAction){
+        fRunAction = runAction;
+    }
+
 
 private:
     /*
@@ -64,6 +69,8 @@ private:
      * RunActionのコンストラクタから設定される。
      */
     AnalysisOutput* fAnalysisOutput = nullptr;
+
+    RunAction* fRunAction = nullptr;
 
 
     /*
